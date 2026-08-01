@@ -47,10 +47,13 @@ elo:
 
   # Que pasa cuando la partida acaba en empate.
   draw:
-    # true  -> el empate cuenta como DERROTA para los dos equipos: los dos
-    #          pierden Elo y se les suma una derrota en el historial.
-    # false -> empate de verdad: no se mueve el Elo y se suma un empate.
-    counts-as-loss: true
+    # Porcentaje de lo que se habria perdido en una derrota que se pierde al
+    # empatar. El empate se muestra como EMPATE y cuenta como empate en las
+    # estadisticas, solo cambia cuanto Elo se mueve.
+    #   40 -> si una derrota te habria costado 20 Elo, el empate te cuesta 8
+    #    0 -> empatar no mueve el Elo
+    #  100 -> empatar cuesta lo mismo que perder
+    loss-percent: 40
 
   # MVP: el que mas goles marque en la partida se lleva Elo extra.
   mvp:
@@ -100,6 +103,18 @@ queue:
   # partida ranked (ni como rivales ni como companeros). Se quedan en cola
   # hasta que aparezca alguien mas con quien jugar.
   block-same-ip: true
+
+# Parties: jugar con amigos en el mismo equipo.
+party:
+  enabled: true
+  # Maximo de jugadores por party.
+  max-size: 3
+  # Diferencia de Elo maxima entre dos miembros cualesquiera de la party.
+  # Evita que un jugador alto meta a un amigo bajo para farmear partidas
+  # faciles (o al reves).
+  max-elo-difference: 600
+  # Segundos que dura una invitacion antes de caducar.
+  invite-timeout-seconds: 60
 
 # Modos de juego. Puedes crear los que quieras.
 modes:

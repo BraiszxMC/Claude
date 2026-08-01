@@ -10,6 +10,7 @@ import com.braiszx.bbranked.hook.RankedPlaceholderExpansion;
 import com.braiszx.bbranked.listener.BlockBallListener;
 import com.braiszx.bbranked.listener.PlayerConnectionListener;
 import com.braiszx.bbranked.match.MatchManager;
+import com.braiszx.bbranked.party.PartyManager;
 import com.braiszx.bbranked.queue.QueueManager;
 import com.braiszx.bbranked.util.Messages;
 import com.github.shynixn.blockball.contract.GameService;
@@ -35,6 +36,7 @@ public final class BlockBallRankedPlugin extends JavaPlugin {
     private StatsStorage storage;
     private StatsManager statsManager;
     private BanManager banManager;
+    private PartyManager partyManager;
     private EloCalculator eloCalculator;
     private MatchManager matchManager;
     private QueueManager queueManager;
@@ -67,8 +69,10 @@ public final class BlockBallRankedPlugin extends JavaPlugin {
         this.banManager = new BanManager(storage);
         this.banManager.load();
         this.eloCalculator = new EloCalculator(rankedConfig);
+        this.partyManager = new PartyManager(rankedConfig, statsManager);
         this.matchManager = new MatchManager(this, rankedConfig, messages, statsManager, eloCalculator);
-        this.queueManager = new QueueManager(rankedConfig, messages, statsManager, matchManager, banManager);
+        this.queueManager = new QueueManager(rankedConfig, messages, statsManager, matchManager,
+                banManager, partyManager);
 
         registerListeners();
         registerCommand();
@@ -110,7 +114,8 @@ public final class BlockBallRankedPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 new BlockBallListener(rankedConfig, messages, matchManager, queueManager, banManager), this);
         getServer().getPluginManager().registerEvents(
-                new PlayerConnectionListener(statsManager, queueManager, matchManager), this);
+                new PlayerConnectionListener(statsManager, queueManager, matchManager, partyManager, messages),
+                this);
     }
 
     private void registerCommand() {
@@ -120,7 +125,7 @@ public final class BlockBallRankedPlugin extends JavaPlugin {
             return;
         }
         RankedCommand executor = new RankedCommand(this, rankedConfig, messages, statsManager,
-                queueManager, matchManager, banManager);
+                queueManager, matchManager, banManager, partyManager);
         command.setExecutor(executor);
         command.setTabCompleter(executor);
     }

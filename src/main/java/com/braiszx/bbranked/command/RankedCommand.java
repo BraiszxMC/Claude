@@ -11,6 +11,8 @@ import com.braiszx.bbranked.data.PlayerStats;
 import com.braiszx.bbranked.data.StatsManager;
 import com.braiszx.bbranked.match.MatchManager;
 import com.braiszx.bbranked.match.RankedMatch;
+import com.braiszx.bbranked.party.Party;
+import com.braiszx.bbranked.party.PartyManager;
 import com.braiszx.bbranked.queue.QueueManager;
 import com.braiszx.bbranked.util.Messages;
 import com.github.shynixn.blockball.contract.SoccerGame;
@@ -41,9 +43,11 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
     private final QueueManager queues;
     private final MatchManager matches;
     private final BanManager bans;
+    private final PartyManager parties;
 
     public RankedCommand(BlockBallRankedPlugin plugin, RankedConfig config, Messages messages,
-                         StatsManager stats, QueueManager queues, MatchManager matches, BanManager bans) {
+                         StatsManager stats, QueueManager queues, MatchManager matches, BanManager bans,
+                         PartyManager parties) {
         this.plugin = plugin;
         this.config = config;
         this.messages = messages;
@@ -51,6 +55,7 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
         this.queues = queues;
         this.matches = matches;
         this.bans = bans;
+        this.parties = parties;
     }
 
     @Override
@@ -77,6 +82,8 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
             case "banip" -> handleBanIp(sender, args);
             case "unbanip" -> handleUnbanIp(sender, args);
             case "bans", "baneos" -> handleBans(sender);
+            case "unpenalize", "despenalizar" -> handleUnpenalize(sender, args);
+            case "party", "grupo" -> handleParty(sender, args);
             default -> sendHelp(sender);
         }
         return true;
@@ -90,7 +97,9 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
     private void sendHelp(CommandSender sender) {
         Map<String, String> placeholders = Map.of(
                 "modes", String.join(", ", config.modes().keySet()),
-                "placements", String.valueOf(config.placementMatches()));
+                "placements", String.valueOf(config.placementMatches()),
+                "partysize", String.valueOf(config.partyMaxSize()),
+                "partyelo", String.valueOf(config.partyMaxEloDifference()));
 
         for (Component line : messages.list("help", placeholders)) {
             sender.sendMessage(line);
@@ -403,8 +412,254 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
     }
 
     // ------------------------------------------------------------------
+    //  Parties
+    // ------------------------------------------------------------------
+
+    private void handleParty(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            messages.send(sender, "players-only");
+            return;
+        }
+        if (!config.partyEnabled()) {
+            messages.send(sender, "party.disabled");
+            return;
+        }
+
+        String sub = args.length >= 2 ? args[1].toLowerCase(Locale.ROOT) : "info";
+        switch (sub) {
+            case "invite", "invitar" -> partyInvite(player, args);
+            case "accept", "aceptar" -> partyAccept(player, args);
+            case "deny", "denegar", "rechazar" -> partyDeny(player, args);
+            case "kick", "expulsar" -> partyKick(player, args);
+            case "leave", "salir" -> partyLeave(player);
+            case "disband", "deshacer" -> partyDisband(player);
+            default -> partyInfo(player);
+        }
+    }
+
+    private void partyInvite(Player player, String[] args) {
+        if (args.length < 3) {
+            messages.send(player, "party.not-in-party");
+            return;
+        }
+
+        Player target = Bukkit.getPlayerExact(args[2]);
+        if (target == null) {
+            messages.send(player, "player-not-found", Map.of("player", args[2]));
+            return;
+        }
+        if (target.equals(player)) {
+            messages.send(player, "party.cannot-invite-self");
+            return;
+        }
+
+        Party existing = parties.partyOf(player.getUniqueId());
+        if (existing != null && !existing.isLeader(player.getUniqueId())) {
+            messages.send(player, "party.not-leader");
+            return;
+        }
+
+        PartyManager.JoinResult result = parties.invite(player.getUniqueId(), target.getUniqueId());
+        switch (result) {
+            case OK -> {
+                if (existing == null) {
+                    messages.send(player, "party.created");
+                }
+                messages.send(player, "party.invited", Map.of("player", target.getName()));
+                messages.send(target, "party.invite-received", Map.of(
+                        "player", player.getName(),
+                        "seconds", String.valueOf(config.partyInviteTimeoutSeconds())));
+            }
+            case PARTY_FULL -> messages.send(player, "party.full",
+                    Map.of("max", String.valueOf(config.partyMaxSize())));
+            case ELO_TOO_DIFFERENT -> messages.send(player, "party.elo-too-different", Map.of(
+                    "player", target.getName(),
+                    "max", String.valueOf(config.partyMaxEloDifference())));
+            case ALREADY_IN_PARTY -> messages.send(player, "party.already-in-party",
+                    Map.of("player", target.getName()));
+            default -> messages.send(player, "party.invite-expired");
+        }
+    }
+
+    private void partyAccept(Player player, String[] args) {
+        if (args.length < 3) {
+            messages.send(player, "party.invite-expired");
+            return;
+        }
+        Player leader = Bukkit.getPlayerExact(args[2]);
+        if (leader == null) {
+            messages.send(player, "player-not-found", Map.of("player", args[2]));
+            return;
+        }
+
+        PartyManager.JoinResult result = parties.accept(player.getUniqueId(), leader.getUniqueId());
+        switch (result) {
+            case OK -> {
+                messages.send(player, "party.you-joined", Map.of("leader", leader.getName()));
+                Party party = parties.partyOf(player.getUniqueId());
+                if (party != null) {
+                    notifyParty(party, player.getUniqueId(), "party.joined",
+                            Map.of("player", player.getName()));
+                }
+            }
+            case PARTY_FULL -> messages.send(player, "party.full",
+                    Map.of("max", String.valueOf(config.partyMaxSize())));
+            case ELO_TOO_DIFFERENT -> messages.send(player, "party.elo-too-different", Map.of(
+                    "player", player.getName(),
+                    "max", String.valueOf(config.partyMaxEloDifference())));
+            case ALREADY_IN_PARTY -> messages.send(player, "party.already-in-party",
+                    Map.of("player", player.getName()));
+            default -> messages.send(player, "party.invite-expired");
+        }
+    }
+
+    private void partyDeny(Player player, String[] args) {
+        if (args.length < 3) {
+            return;
+        }
+        Player leader = Bukkit.getPlayerExact(args[2]);
+        if (leader != null) {
+            parties.deny(player.getUniqueId(), leader.getUniqueId());
+        }
+    }
+
+    private void partyKick(Player player, String[] args) {
+        Party party = parties.partyOf(player.getUniqueId());
+        if (party == null) {
+            messages.send(player, "party.not-in-party");
+            return;
+        }
+        if (!party.isLeader(player.getUniqueId())) {
+            messages.send(player, "party.not-leader");
+            return;
+        }
+        if (args.length < 3) {
+            return;
+        }
+
+        Player target = Bukkit.getPlayerExact(args[2]);
+        if (target == null || !party.contains(target.getUniqueId())) {
+            messages.send(player, "party.target-not-in-party",
+                    Map.of("player", args.length >= 3 ? args[2] : "?"));
+            return;
+        }
+
+        queues.remove(target.getUniqueId());
+        parties.leave(target.getUniqueId());
+        messages.send(target, "party.kicked");
+        messages.send(player, "party.kicked-ok", Map.of("player", target.getName()));
+        notifyParty(party, target.getUniqueId(), "party.left", Map.of("player", target.getName()));
+    }
+
+    private void partyLeave(Player player) {
+        Party party = parties.partyOf(player.getUniqueId());
+        if (party == null) {
+            messages.send(player, "party.not-in-party");
+            return;
+        }
+
+        // Salirse de la party tambien saca a la party de la cola.
+        queues.remove(player.getUniqueId());
+        List<UUID> before = parties.leave(player.getUniqueId());
+        messages.send(player, "party.you-left");
+
+        for (UUID member : before) {
+            Player memberPlayer = Bukkit.getPlayer(member);
+            if (memberPlayer != null && !member.equals(player.getUniqueId())) {
+                messages.send(memberPlayer, "party.left", Map.of("player", player.getName()));
+            }
+        }
+    }
+
+    private void partyDisband(Player player) {
+        Party party = parties.partyOf(player.getUniqueId());
+        if (party == null) {
+            messages.send(player, "party.not-in-party");
+            return;
+        }
+        if (!party.isLeader(player.getUniqueId())) {
+            messages.send(player, "party.not-leader");
+            return;
+        }
+
+        List<UUID> before = parties.disband(player.getUniqueId());
+        for (UUID member : before) {
+            queues.remove(member);
+            Player memberPlayer = Bukkit.getPlayer(member);
+            if (memberPlayer != null) {
+                messages.send(memberPlayer, "party.disbanded");
+            }
+        }
+    }
+
+    private void partyInfo(Player player) {
+        Party party = parties.partyOf(player.getUniqueId());
+        if (party == null) {
+            messages.send(player, "party.not-in-party");
+            return;
+        }
+
+        messages.sendRaw(player, "party.info-header");
+        for (UUID member : party.members()) {
+            PlayerStats memberStats = stats.require(member);
+            messages.sendRaw(player, party.isLeader(member) ? "party.info-leader" : "party.info-line",
+                    Map.of("player", memberStats.name(), "elo", String.valueOf(memberStats.elo())));
+        }
+    }
+
+    private void notifyParty(Party party, UUID except, String key, Map<String, String> placeholders) {
+        for (UUID member : party.members()) {
+            if (member.equals(except)) {
+                continue;
+            }
+            Player memberPlayer = Bukkit.getPlayer(member);
+            if (memberPlayer != null) {
+                messages.send(memberPlayer, key, placeholders);
+            }
+        }
+    }
+
+    // ------------------------------------------------------------------
     //  Baneos
     // ------------------------------------------------------------------
+
+    /**
+     * /ranked unpenalize &lt;jugador|*&gt; - quita la sancion por abandonar.
+     */
+    private void handleUnpenalize(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("bbranked.admin")) {
+            messages.send(sender, "no-permission");
+            return;
+        }
+        if (args.length < 2) {
+            sendHelp(sender);
+            return;
+        }
+
+        if (args[1].equals("*")) {
+            int cleared = queues.clearAllPenalties();
+            messages.send(sender, "admin.penalty-cleared-all", Map.of("count", String.valueOf(cleared)));
+            return;
+        }
+
+        String name = args[1];
+        resolvePlayer(name, resolved -> {
+            if (resolved == null) {
+                messages.send(sender, "player-not-found", Map.of("player", name));
+                return;
+            }
+            if (!queues.clearPenalty(resolved.uuid())) {
+                messages.send(sender, "admin.penalty-none", Map.of("player", resolved.name()));
+                return;
+            }
+            messages.send(sender, "admin.penalty-cleared", Map.of("player", resolved.name()));
+
+            Player online = Bukkit.getPlayer(resolved.uuid());
+            if (online != null) {
+                messages.send(online, "admin.penalty-notify");
+            }
+        });
+    }
 
     /**
      * /ranked ban &lt;jugador&gt; [tiempo] [motivo]
@@ -602,14 +857,20 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
         List<String> options = new ArrayList<>();
 
         if (args.length == 1) {
-            options.addAll(List.of("join", "leave", "stats", "top", "queues"));
+            options.addAll(List.of("join", "leave", "stats", "top", "queues", "party", "help"));
             if (sender.hasPermission("bbranked.admin")) {
                 options.addAll(List.of("reload", "check", "setelo", "reset", "matches", "forceend",
-                        "ban", "unban", "banip", "unbanip", "bans"));
+                        "ban", "unban", "banip", "unbanip", "bans", "unpenalize"));
             }
         } else if (args.length == 2) {
             switch (args[0].toLowerCase(Locale.ROOT)) {
                 case "join", "entrar" -> options.addAll(config.modes().keySet());
+                case "party", "grupo" ->
+                        options.addAll(List.of("invite", "accept", "deny", "kick", "leave", "disband", "info"));
+                case "unpenalize", "despenalizar" -> {
+                    options.add("*");
+                    Bukkit.getOnlinePlayers().forEach(player -> options.add(player.getName()));
+                }
                 case "stats", "elo", "setelo", "reset", "forceend", "ban", "unban", "banip" ->
                         Bukkit.getOnlinePlayers().forEach(player -> options.add(player.getName()));
                 case "unbanip" -> bans.activeBans().stream()
@@ -619,9 +880,15 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
                     // sin sugerencias
                 }
             }
-        } else if (args.length == 3
-                && List.of("ban", "banip").contains(args[0].toLowerCase(Locale.ROOT))) {
-            options.addAll(List.of("perm", "30m", "1h", "6h", "1d", "7d"));
+        } else if (args.length == 3) {
+            String first = args[0].toLowerCase(Locale.ROOT);
+            if (List.of("ban", "banip").contains(first)) {
+                options.addAll(List.of("perm", "30m", "1h", "6h", "1d", "7d"));
+            } else if (List.of("party", "grupo").contains(first)
+                    && List.of("invite", "invitar", "accept", "aceptar", "deny", "rechazar", "kick", "expulsar")
+                    .contains(args[1].toLowerCase(Locale.ROOT))) {
+                Bukkit.getOnlinePlayers().forEach(player -> options.add(player.getName()));
+            }
         }
 
         String prefix = args[args.length - 1].toLowerCase(Locale.ROOT);

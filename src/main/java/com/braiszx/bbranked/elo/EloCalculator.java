@@ -68,32 +68,24 @@ public final class EloCalculator {
         double redExpected = expectedScore(redAverage, blueAverage);
         double blueExpected = 1.0D - redExpected;
 
-        double redActual;
-        double blueActual;
-        if (winner == MatchWinner.DRAW && config.drawCountsAsLoss()) {
-            // Empate tratado como derrota para los dos: ninguno puntua, asi que
-            // los dos equipos pierden Elo respecto a lo que se esperaba de ellos.
-            redActual = 0.0D;
-            blueActual = 0.0D;
-        } else {
-            redActual = switch (winner) {
-                case RED -> 1.0D;
-                case BLUE -> 0.0D;
-                case DRAW -> 0.5D;
-            };
-            blueActual = 1.0D - redActual;
-        }
+        double redActual = switch (winner) {
+            case RED -> 1.0D;
+            case BLUE -> 0.0D;
+            case DRAW -> 0.5D;
+        };
+        double blueActual = 1.0D - redActual;
 
         double multiplier = goalMultiplier(Math.abs(redScore - blueScore), winner);
+        boolean draw = winner == MatchWinner.DRAW;
 
         List<EloChange> changes = new ArrayList<>(red.size() + blue.size());
-        changes.addAll(applyTeam(red, redActual, redExpected, multiplier, leavers));
-        changes.addAll(applyTeam(blue, blueActual, blueExpected, multiplier, leavers));
+        changes.addAll(applyTeam(red, redActual, redExpected, multiplier, leavers, draw));
+        changes.addAll(applyTeam(blue, blueActual, blueExpected, multiplier, leavers, draw));
         return changes;
     }
 
     private List<EloChange> applyTeam(List<PlayerStats> team, double actual, double expected,
-                                      double multiplier, Set<UUID> leavers) {
+                                      double multiplier, Set<UUID> leavers, boolean draw) {
         boolean teamHasLeaver = team.stream().anyMatch(stats -> leavers.contains(stats.uuid()));
         List<EloChange> changes = new ArrayList<>(team.size());
 
@@ -113,6 +105,14 @@ public final class EloCalculator {
                 // Sus companeros cuentan la derrota en el historial pero no
                 // pagan el Elo de una partida que no pudieron jugar.
                 rounded = 0;
+            } else if (draw) {
+                // El empate cuenta como empate (outcome 0), pero cuesta una
+                // parte de lo que habria costado perder. Asi empatar duele
+                // menos que perder, en vez de no significar nada.
+                double lossDelta = kFactor(stats) * (0.0D - expected);
+                double delta = lossDelta * (config.drawLossPercent() / 100.0D);
+                // Sin minimos forzados: un empate puede costar 0 Elo.
+                rounded = (int) (delta >= 0 ? Math.floor(delta + 0.5D) : Math.ceil(delta - 0.5D));
             } else {
                 double delta = kFactor(stats) * (actual - expected) * multiplier;
                 rounded = roundDelta(delta, outcome, false);

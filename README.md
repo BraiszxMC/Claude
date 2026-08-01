@@ -24,6 +24,7 @@ Sistema de **partidas rankeds con Elo** montado encima del plugin
 | **MVP** | en modos por equipos, el maximo goleador se lleva Elo extra |
 | **Anti-multicuentas** | dos jugadores con la misma IP nunca coinciden en la misma partida |
 | **Baneos** | por jugador o por IP, temporales o permanentes, con persistencia |
+| **Parties** | hasta 3 amigos con Elo parecido entran juntos a la cola y juegan en el mismo equipo |
 
 ---
 
@@ -66,6 +67,15 @@ Paquete `com.github.shynixn.blockball.event`:
    **monitor propio** que corre cada segundo: cachea el marcador y, si la
    instancia de la partida se marca como `isDisposed()` sin haber recibido
    `GameEndEvent`, deduce el resultado del marcador guardado.
+
+   Esto tiene una consecuencia menos obvia: `SoccerGameImpl.close()` pone
+   `isDisposed = true` y **despues** llama a `leave()` por cada jugador, lo
+   que dispara un `GameLeaveEvent` por cabeza. En una victoria da igual,
+   porque `GameEndEvent` llega ~3s antes y para entonces el monitor ya ha
+   liquidado la partida. Pero en un empate no llega ningun evento, asi que
+   esas salidas parecian abandonos y sancionaban a los dos equipos. El
+   listener comprueba `game.isDisposed()` para distinguir "la partida se esta
+   cerrando" de "alguien se ha ido".
 2. Cuando una partida termina, BlockBall la **cierra y crea una instancia
    nueva** para la misma arena (`GameServiceImpl.runGames()` llama a
    `reload(arena)` en cuanto ve `isDisposed`). Por eso el plugin guarda la
@@ -273,6 +283,13 @@ de arrancar el servidor.
 | `/ranked banip <jugador\|ip> [tiempo] [motivo]` | `bbranked.admin` | banear una IP del ranked |
 | `/ranked unbanip <ip>` | `bbranked.admin` | quitar el baneo de IP |
 | `/ranked bans` | `bbranked.admin` | listar los baneos activos |
+| `/ranked unpenalize <jugador\|*>` | `bbranked.admin` | quitar la sancion por abandonar (`*` = todas) |
+| `/ranked party invite <jugador>` | — | invitar a tu party |
+| `/ranked party accept <jugador>` | — | aceptar una invitacion |
+| `/ranked party kick <jugador>` | — | expulsar (solo el lider) |
+| `/ranked party leave` | — | salir de la party |
+| `/ranked party disband` | — | deshacer la party (solo el lider) |
+| `/ranked party info` | — | ver quien esta en tu party |
 
 Los tiempos se escriben `30m`, `2h`, `7d`, `1w` o `perm`. Si te saltas el
 tiempo, el baneo es permanente y todo lo que escribas se toma como motivo.
@@ -282,6 +299,41 @@ desconectado (se busca en la base de datos del plugin).
 Alias: `/rk`, `/elo`, `/bbranked`.
 
 ---
+
+## Parties
+
+Hasta 3 amigos pueden entrar juntos a la cola y jugar **en el mismo equipo**.
+
+```bash
+/ranked party invite Pepe     # se crea la party sola con la primera invitacion
+/ranked party accept Juan     # Pepe acepta
+/ranked join 3v3              # solo el lider encola a la party
+```
+
+Reglas:
+
+* **Maximo 3** jugadores (`party.max-size`).
+* **Maximo 600 de diferencia de Elo** entre dos miembros cualesquiera
+  (`party.max-elo-difference`). Se comprueba contra todos, no solo contra el
+  lider, y se vuelve a comprobar al aceptar. Asi nadie mete a un amigo mucho
+  peor o mucho mejor para desequilibrar la partida.
+* La party tiene que **caber en un equipo**: una party de 3 solo puede jugar
+  3v3, una de 2 puede jugar 2v2 o 3v3. Si no cabe, el plugin lo dice.
+* Solo el **lider** mete a la party en la cola.
+* Si alguien se sale de la party o se desconecta, la party sale de la cola.
+* Las invitaciones caducan a los 60s (`party.invite-timeout-seconds`).
+
+Internamente la cola no guarda jugadores sueltos sino **tickets**: un jugador
+solo es un ticket de 1 y una party es un ticket de N. El reparto de equipos
+prueba todas las combinaciones de tickets y elige la que menos diferencia de
+Elo deja entre los dos equipos, sin partir nunca un ticket. Si un grupo suma
+los jugadores necesarios pero no se puede repartir sin separar una party (dos
+parties de 2 en un 3v3, por ejemplo), se descarta y se prueba otro grupo.
+
+> El anti-multicuentas se aplica **entre tickets distintos**, asi que nunca te
+> puedes cruzar con tu propia alt. Dentro de una party no se comprueba, porque
+> sus miembros son companeros de equipo por definicion (dos hermanos en la
+> misma casa pueden jugar juntos).
 
 ## Placeholders
 
@@ -316,7 +368,7 @@ elo:
     max-multiplier: 1.6
 
   draw:
-    counts-as-loss: true    # el empate cuenta como derrota para los dos
+    loss-percent: 40        # empatar cuesta el 40% de lo que costaria perder
 
   mvp:
     enabled: true           # el maximo goleador se lleva Elo extra
@@ -332,6 +384,10 @@ elo:
 
 queue:
   block-same-ip: true       # anti-multicuentas (ver nota de arriba)
+
+party:
+  max-size: 3               # amigos por party
+  max-elo-difference: 600   # diferencia de Elo maxima entre miembros
 
 queue:
   initial-range: 100              # diferencia de Elo aceptada al entrar

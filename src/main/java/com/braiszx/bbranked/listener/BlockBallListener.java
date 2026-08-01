@@ -88,6 +88,22 @@ public final class BlockBallListener implements Listener {
         if (match == null || match.settled()) {
             return;
         }
+
+        // BlockBall.close() pone isDisposed = true ANTES de sacar a todos los
+        // jugadores con leave(), asi que estas salidas son el cierre normal de
+        // la partida, no abandonos. Sin esta comprobacion, un empate (que no
+        // dispara GameEndEvent y por tanto no liquida la partida antes del
+        // cierre) marcaba a los dos equipos como abandonadores y los
+        // sancionaba.
+        if (event.getGame().isDisposed()) {
+            return;
+        }
+
+        // Si la partida ya tiene resultado, lo que viene despues es el cierre.
+        if (match.pendingWinner() != null) {
+            return;
+        }
+
         if (match.started()) {
             queues.penalize(player.getUniqueId());
         }

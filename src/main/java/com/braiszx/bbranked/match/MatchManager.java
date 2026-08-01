@@ -197,15 +197,22 @@ public final class MatchManager {
      * ejecuta fuera del hilo principal, y solo se vuelve a el para tocar
      * nuestro propio estado y mandar mensajes.</p>
      *
+     * <p>Los equipos vienen ya repartidos desde la cola, que es quien sabe
+     * que jugadores van juntos en una party y no se pueden separar.</p>
+     *
      * @param onJoinFailure se ejecuta en el hilo principal si al final no se
      *                      ha podido meter a todo el mundo en la arena
      * @return true si se ha lanzado el intento (reservando la arena); no
      *         implica que la partida vaya a arrancar, para eso esta {@code onJoinFailure}
      */
-    public boolean startMatch(QueueMode mode, List<Player> players, Runnable onJoinFailure) {
-        if (players.size() != mode.requiredPlayers()) {
+    public boolean startMatch(QueueMode mode, List<Player> redPlayers, List<Player> bluePlayers,
+                              Runnable onJoinFailure) {
+        if (redPlayers.size() != mode.teamSize() || bluePlayers.size() != mode.teamSize()) {
             return false;
         }
+
+        List<Player> players = new ArrayList<>(redPlayers);
+        players.addAll(bluePlayers);
 
         String arenaName = null;
         SoccerGame game = null;
@@ -220,10 +227,6 @@ public final class MatchManager {
         if (game == null) {
             return false;
         }
-
-        List<List<Player>> teams = balanceTeams(players, mode.teamSize());
-        List<Player> redPlayers = teams.get(0);
-        List<Player> bluePlayers = teams.get(1);
 
         reservedArenas.add(arenaName.toLowerCase(Locale.ROOT));
         for (Player player : players) {
@@ -338,27 +341,44 @@ public final class MatchManager {
 
             Team team = match.teamOf(uuid);
             List<UUID> rivals = team == Team.RED ? match.blue() : match.red();
+            List<UUID> allies = team == Team.RED ? match.red() : match.blue();
             PlayerStats own = stats.getOrDefault(player);
             RankTier ownRank = config.rankOf(own.elo());
 
             messages.sendRaw(player, "matchup.header");
+
+            messages.sendRaw(player, rivals.size() > 1 ? "matchup.rivals-title" : "matchup.rival-title");
             for (UUID rivalUuid : rivals) {
-                PlayerStats rivalStats = stats.cached(rivalUuid);
-                if (rivalStats == null) {
-                    continue;
-                }
-                RankTier rivalRank = config.rankOf(rivalStats.elo());
-                messages.sendRaw(player, "matchup.rival", Map.of(
-                        "player", rivalStats.name(),
-                        "elo", String.valueOf(rivalStats.elo()),
-                        "rank", rivalRank.displayName()));
+                sendMatchupLine(player, "matchup.line", rivalUuid);
             }
-            messages.sendRaw(player, "matchup.you", Map.of(
+
+            // En modos por equipos hace falta ver tambien el Elo de los
+            // companeros, no solo el propio.
+            boolean hasAllies = allies.size() > 1;
+            messages.sendRaw(player, hasAllies ? "matchup.team-title" : "matchup.you-title");
+            messages.sendRaw(player, "matchup.line-self", Map.of(
                     "player", own.name(),
                     "elo", String.valueOf(own.elo()),
                     "rank", ownRank.displayName()));
+            for (UUID allyUuid : allies) {
+                if (!allyUuid.equals(uuid)) {
+                    sendMatchupLine(player, "matchup.line", allyUuid);
+                }
+            }
+
             messages.sendRaw(player, "matchup.footer");
         }
+    }
+
+    private void sendMatchupLine(Player to, String key, UUID subject) {
+        PlayerStats subjectStats = stats.cached(subject);
+        if (subjectStats == null) {
+            return;
+        }
+        messages.sendRaw(to, key, Map.of(
+                "player", subjectStats.name(),
+                "elo", String.valueOf(subjectStats.elo()),
+                "rank", config.rankOf(subjectStats.elo()).displayName()));
     }
 
     /**
@@ -374,64 +394,6 @@ public final class MatchManager {
         }
     }
 
-    /**
-     * Reparte a los jugadores en dos equipos minimizando la diferencia de Elo.
-     * Con 10 jugadores o menos prueba todas las combinaciones posibles.
-     */
-    private List<List<Player>> balanceTeams(List<Player> players, int teamSize) {
-        int total = players.size();
-        int[] ratings = new int[total];
-        for (int i = 0; i < total; i++) {
-            ratings[i] = stats.getOrDefault(players.get(i)).elo();
-        }
-
-        List<Player> bestRed = null;
-        List<Player> bestBlue = null;
-
-        if (total <= 10) {
-            int bestDifference = Integer.MAX_VALUE;
-            for (int mask = 0; mask < (1 << total); mask++) {
-                if (Integer.bitCount(mask) != teamSize) {
-                    continue;
-                }
-                int redSum = 0;
-                int blueSum = 0;
-                for (int i = 0; i < total; i++) {
-                    if ((mask & (1 << i)) != 0) {
-                        redSum += ratings[i];
-                    } else {
-                        blueSum += ratings[i];
-                    }
-                }
-                int difference = Math.abs(redSum - blueSum);
-                if (difference < bestDifference) {
-                    bestDifference = difference;
-                    List<Player> red = new ArrayList<>();
-                    List<Player> blue = new ArrayList<>();
-                    for (int i = 0; i < total; i++) {
-                        (((mask & (1 << i)) != 0) ? red : blue).add(players.get(i));
-                    }
-                    bestRed = red;
-                    bestBlue = blue;
-                }
-            }
-        }
-
-        if (bestRed == null) {
-            // Reparto en serpiente para plantillas grandes.
-            List<Player> sorted = new ArrayList<>(players);
-            sorted.sort((a, b) -> Integer.compare(
-                    stats.getOrDefault(b).elo(), stats.getOrDefault(a).elo()));
-            bestRed = new ArrayList<>();
-            bestBlue = new ArrayList<>();
-            for (int i = 0; i < sorted.size(); i++) {
-                boolean toRed = (i % 4 == 0 || i % 4 == 3);
-                (toRed ? bestRed : bestBlue).add(sorted.get(i));
-            }
-        }
-
-        return List.of(bestRed, bestBlue);
-    }
 
     // ------------------------------------------------------------------
     //  Eventos de BlockBall
