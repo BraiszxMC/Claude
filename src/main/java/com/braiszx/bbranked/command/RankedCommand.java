@@ -62,6 +62,7 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
             case "reload" -> handleReload(sender);
             case "setelo" -> handleSetElo(sender, args);
             case "reset" -> handleReset(sender, args);
+            case "check", "comprobar" -> handleCheck(sender);
             case "matches", "partidas" -> handleMatches(sender);
             case "forceend" -> handleForceEnd(sender, args);
             default -> messages.sendList(sender, "help");
@@ -228,6 +229,30 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
         }
         plugin.reloadEverything();
         messages.send(sender, "reloaded");
+        // Recargar suele ir acompanado de cambios en las arenas, asi que se
+        // revisan de paso.
+        handleCheck(sender);
+    }
+
+    /**
+     * Revisa que las arenas del config existan y esten bien montadas.
+     */
+    private void handleCheck(CommandSender sender) {
+        if (!sender.hasPermission("bbranked.admin")) {
+            messages.send(sender, "no-permission");
+            return;
+        }
+
+        List<String> problems = matches.validateArenas();
+        if (problems.isEmpty()) {
+            messages.send(sender, "admin.check-ok");
+            return;
+        }
+
+        messages.send(sender, "admin.check-header");
+        for (String problem : problems) {
+            messages.sendRaw(sender, "admin.check-line", Map.of("problem", problem));
+        }
     }
 
     private void handleSetElo(CommandSender sender, String[] args) {
@@ -347,7 +372,7 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             options.addAll(List.of("join", "leave", "stats", "top", "queues"));
             if (sender.hasPermission("bbranked.admin")) {
-                options.addAll(List.of("reload", "setelo", "reset", "matches", "forceend"));
+                options.addAll(List.of("reload", "check", "setelo", "reset", "matches", "forceend"));
             }
         } else if (args.length == 2) {
             switch (args[0].toLowerCase(Locale.ROOT)) {

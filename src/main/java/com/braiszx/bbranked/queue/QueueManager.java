@@ -78,6 +78,12 @@ public final class QueueManager {
                 "current", String.valueOf(queue.size()),
                 "needed", String.valueOf(mode.requiredPlayers())));
 
+        // Avisar ya si no hay donde jugar, en vez de dejarle esperando sin
+        // saber que la cola no puede arrancar nada.
+        if (matches.freeArenas(mode) <= 0) {
+            messages.send(player, "queue.no-arena", Map.of("mode", mode.displayName()));
+        }
+
         // Emparejar ya, por si con este jugador ya se completa una partida.
         tryMatch(mode);
         return true;

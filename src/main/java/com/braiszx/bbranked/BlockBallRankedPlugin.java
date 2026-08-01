@@ -78,6 +78,10 @@ public final class BlockBallRankedPlugin extends JavaPlugin {
 
         statsManager.refreshLeaderboard();
         getLogger().info("BlockBallRanked activado con " + rankedConfig.modes().size() + " modo(s).");
+
+        // BlockBall carga sus arenas de forma asincrona, asi que la revision se
+        // hace unos segundos despues de arrancar.
+        getServer().getScheduler().runTaskLater(this, this::logArenaProblems, 100L);
     }
 
     @Override
@@ -144,6 +148,24 @@ public final class BlockBallRankedPlugin extends JavaPlugin {
 
         // Guardado periodico por si el servidor se cae de golpe.
         tasks.add(getServer().getScheduler().runTaskTimer(this, statsManager::saveAll, 6000L, 6000L));
+    }
+
+    /**
+     * Avisa por consola de las arenas mal configuradas. Sin esto, un config con
+     * arenas inexistentes deja a los jugadores en una cola que nunca arranca y
+     * sin ninguna pista de por que.
+     */
+    private void logArenaProblems() {
+        List<String> problems = matchManager.validateArenas();
+        if (problems.isEmpty()) {
+            getLogger().info("Arenas ranked verificadas: todo correcto.");
+            return;
+        }
+        getLogger().warning("Hay " + problems.size() + " problema(s) con las arenas ranked:");
+        for (String problem : problems) {
+            getLogger().warning("  - " + problem);
+        }
+        getLogger().warning("Mientras no se arreglen, las colas afectadas no podran arrancar partidas.");
     }
 
     /**

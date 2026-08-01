@@ -68,6 +68,9 @@ admin:
   matches-header: "<gray>--- <white>Partidas ranked activas</white> <gray>---"
   matches-line: "<gray> - <white>{arena}</white> <gray>({mode}) <red>{red}</red><gray>-<blue>{blue}</blue> <gray>| {seconds}s"
   matches-empty: "<gray>No hay partidas ranked activas."
+  check-ok: "<green>Todas las arenas ranked estan bien configuradas."
+  check-header: "<red>Problemas encontrados en las arenas ranked:"
+  check-line: "<gray> - <white>{problem}"
 
 help:
   - "<gray>--- <white>BlockBallRanked</white> <gray>---"
@@ -79,5 +82,6 @@ help:
   - "<white>/ranked reload</white> <gray>- recargar config"
   - "<white>/ranked setelo <jugador> <elo></white> <gray>- cambiar Elo"
   - "<white>/ranked reset <jugador></white> <gray>- reiniciar estadisticas"
+  - "<white>/ranked check</white> <gray>- revisar la configuracion de las arenas"
   - "<white>/ranked matches</white> <gray>- ver partidas activas"
   - "<white>/ranked forceend <jugador></white> <gray>- cancelar su partida"

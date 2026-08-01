@@ -13,6 +13,7 @@ import com.braiszx.bbranked.util.Messages;
 import com.github.shynixn.blockball.contract.GameService;
 import com.github.shynixn.blockball.contract.SoccerGame;
 import com.github.shynixn.blockball.enumeration.GameState;
+import com.github.shynixn.blockball.enumeration.GameType;
 import com.github.shynixn.blockball.enumeration.JoinResult;
 import com.github.shynixn.blockball.enumeration.Team;
 import net.kyori.adventure.text.Component;
@@ -109,6 +110,56 @@ public final class MatchManager {
             }
         }
         return count;
+    }
+
+    /**
+     * Revisa que las arenas del config existan de verdad en BlockBall y esten
+     * bien configuradas. Devuelve una linea por cada problema encontrado.
+     *
+     * <p>Sin esto, un servidor mal configurado deja a la gente en una cola que
+     * nunca puede arrancar nada y sin ningun aviso.</p>
+     */
+    public List<String> validateArenas() {
+        List<String> problems = new ArrayList<>();
+        GameService service = plugin.gameService();
+
+        if (service == null) {
+            problems.add("No se ha podido acceder al GameService de BlockBall.");
+            return problems;
+        }
+
+        for (QueueMode mode : config.modes().values()) {
+            if (mode.arenas().isEmpty()) {
+                problems.add("El modo '" + mode.id() + "' no tiene ninguna arena asignada.");
+                continue;
+            }
+
+            for (String arenaName : mode.arenas()) {
+                SoccerGame game = service.getByName(arenaName);
+
+                if (game == null) {
+                    problems.add("Arena '" + arenaName + "' (modo " + mode.id() + "): no existe en BlockBall"
+                            + " o esta desactivada. Comprueba /blockball list.");
+                    continue;
+                }
+
+                if (game.getArena().getGameType() != GameType.MINIGAME) {
+                    problems.add("Arena '" + arenaName + "' (modo " + mode.id() + "): es de tipo "
+                            + game.getArena().getGameType() + " y tiene que ser MINIGAME."
+                            + " Usa /blockball gamerule gameType " + arenaName + " minigame");
+                }
+
+                int red = game.getArena().getMeta().getRedTeamMeta().getMaxAmount();
+                int blue = game.getArena().getMeta().getBlueTeamMeta().getMaxAmount();
+                if (red != mode.teamSize() || blue != mode.teamSize()) {
+                    problems.add("Arena '" + arenaName + "' (modo " + mode.id() + "): maxAmount es "
+                            + red + "v" + blue + " pero el modo es " + mode.teamSize() + "v" + mode.teamSize()
+                            + ". Ajusta meta.redTeamMeta/blueTeamMeta en"
+                            + " plugins/BlockBall/arena/" + arenaName + ".yml");
+                }
+            }
+        }
+        return problems;
     }
 
     // ------------------------------------------------------------------

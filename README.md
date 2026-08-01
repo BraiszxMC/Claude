@@ -205,11 +205,26 @@ modes:
 Con `queue.block-manual-join: true` nadie puede entrar a esas arenas con
 `/blockball join`: solo el sistema ranked.
 
-### 4. Listo
+### 4. Comprobar
+
+Antes de probar nada, pregunta al propio plugin si las arenas estan bien:
+
+```
+/ranked check
+```
+
+Te dira, arena por arena, si no existe, si no es MINIGAME o si el tamano de
+equipo no cuadra con el modo. Lo mismo sale por consola unos segundos despues
+de arrancar el servidor.
+
+### 5. Listo
 
 ```
 /ranked join 2v2
 ```
+
+> Recuerda que un 2v2 necesita **4 jugadores** en cola. El mensaje al entrar
+> te dice cuantos faltan: `(1/4)`, `(2/4)`...
 
 ---
 
@@ -222,7 +237,8 @@ Con `queue.block-manual-join: true` nadie puede entrar a esas arenas con
 | `/ranked stats [jugador]` | `bbranked.stats` | ver estadisticas |
 | `/ranked top [pagina]` | `bbranked.stats` | ranking global |
 | `/ranked queues` | — | colas activas |
-| `/ranked reload` | `bbranked.admin` | recargar config y mensajes |
+| `/ranked reload` | `bbranked.admin` | recargar config y mensajes (revisa las arenas de paso) |
+| `/ranked check` | `bbranked.admin` | revisar que las arenas del config existan y esten bien |
 | `/ranked setelo <jugador> <elo>` | `bbranked.admin` | cambiar el Elo |
 | `/ranked reset <jugador>` | `bbranked.admin` | reiniciar estadisticas |
 | `/ranked matches` | `bbranked.admin` | partidas ranked en curso |
