@@ -133,24 +133,61 @@ que se generen `config.yml` y `messages.yml`.
 Las arenas ranked son arenas normales de BlockBall, con dos requisitos:
 
 * **Game Type: MINIGAME** (las hubgame no tienen lobby ni countdown)
-* **min y max de cada equipo igual al `team-size` del modo**
+* **`minAmount` y `maxAmount` de cada equipo iguales al `team-size` del modo**
 
-Ejemplo para un 2v2:
+Ejemplo completo para un 2v2. Todos estos comandos son de BlockBall:
 
-```
+```bash
+# --- crear ---
 /blockball create ranked_2v2_1 &7Ranked 2v2
-/blockball edit ranked_2v2_1
+/blockball axe                        # te da el hacha de seleccion
+/blockball highlight ranked_2v2_1     # marca las zonas con particulas
+
+# --- zonas (click izq = esquina A, click der = esquina B, luego el comando) ---
+/blockball select ranked_2v2_1 field
+/blockball select ranked_2v2_1 red_goal
+/blockball select ranked_2v2_1 blue_goal
+
+# --- puntos (ponte de pie donde quieras cada uno) ---
+/blockball location ranked_2v2_1 ball
+/blockball location ranked_2v2_1 leave_spawnpoint
+/blockball location ranked_2v2_1 red_spawnpoint
+/blockball location ranked_2v2_1 blue_spawnpoint
+
+# --- convertir en minigame y anadir los lobbies ---
+/blockball gamerule gameType ranked_2v2_1 minigame
+/blockball location ranked_2v2_1 red_lobby
+/blockball location ranked_2v2_1 blue_lobby
+
+# --- activar ---
+/blockball toggle ranked_2v2_1
+/blockball list                       # debe salir [enabled]
 ```
 
-En el GUI:
-* `Game Type` -> `MINIGAME`
-* `Team Red` -> min **2**, max **2**
-* `Team Blue` -> min **2**, max **2**
-* Marca los spawns, la pelota, las porterias y el `outer field` como en
-  cualquier arena
-* Activa la arena (`enabled`)
+El tamano de equipo **no tiene comando**: se edita en el archivo
+`plugins/BlockBall/arena/ranked_2v2_1.yml`.
 
-Y despues apuntala en el config:
+```yaml
+meta:
+  redTeamMeta:
+    minAmount: 2      # cuantos hacen falta para que arranque la cuenta atras
+    maxAmount: 2      # tope del equipo
+  blueTeamMeta:
+    minAmount: 2
+    maxAmount: 2
+```
+
+Y aplica el cambio sin reiniciar:
+
+```bash
+/blockball reload ranked_2v2_1
+```
+
+> Los valores por defecto son `minAmount: 0` y `maxAmount: 10`. Si los dejas
+> asi, BlockBall aceptaria hasta 10 por equipo y el ranked no controlaria el
+> tamano de las partidas.
+
+Y despues apuntala en el config de este plugin:
 
 ```yaml
 modes:
