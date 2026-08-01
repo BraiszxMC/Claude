@@ -1,5 +1,6 @@
 package com.braiszx.bbranked;
 
+import com.braiszx.bbranked.ban.BanManager;
 import com.braiszx.bbranked.command.RankedCommand;
 import com.braiszx.bbranked.config.RankedConfig;
 import com.braiszx.bbranked.data.StatsManager;
@@ -33,6 +34,7 @@ public final class BlockBallRankedPlugin extends JavaPlugin {
     private Messages messages;
     private StatsStorage storage;
     private StatsManager statsManager;
+    private BanManager banManager;
     private EloCalculator eloCalculator;
     private MatchManager matchManager;
     private QueueManager queueManager;
@@ -62,9 +64,11 @@ public final class BlockBallRankedPlugin extends JavaPlugin {
         }
 
         this.statsManager = new StatsManager(rankedConfig, storage);
+        this.banManager = new BanManager(storage);
+        this.banManager.load();
         this.eloCalculator = new EloCalculator(rankedConfig);
         this.matchManager = new MatchManager(this, rankedConfig, messages, statsManager, eloCalculator);
-        this.queueManager = new QueueManager(rankedConfig, messages, statsManager, matchManager);
+        this.queueManager = new QueueManager(rankedConfig, messages, statsManager, matchManager, banManager);
 
         registerListeners();
         registerCommand();
@@ -104,7 +108,7 @@ public final class BlockBallRankedPlugin extends JavaPlugin {
 
     private void registerListeners() {
         getServer().getPluginManager().registerEvents(
-                new BlockBallListener(rankedConfig, messages, matchManager, queueManager), this);
+                new BlockBallListener(rankedConfig, messages, matchManager, queueManager, banManager), this);
         getServer().getPluginManager().registerEvents(
                 new PlayerConnectionListener(statsManager, queueManager, matchManager), this);
     }
@@ -116,7 +120,7 @@ public final class BlockBallRankedPlugin extends JavaPlugin {
             return;
         }
         RankedCommand executor = new RankedCommand(this, rankedConfig, messages, statsManager,
-                queueManager, matchManager);
+                queueManager, matchManager, banManager);
         command.setExecutor(executor);
         command.setTabCompleter(executor);
     }

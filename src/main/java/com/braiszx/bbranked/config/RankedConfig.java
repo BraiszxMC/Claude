@@ -42,6 +42,11 @@ public final class RankedConfig {
     private boolean goalDifferenceEnabled;
     private double goalDifferenceFactor;
     private double goalDifferenceMaxMultiplier;
+    private boolean drawCountsAsLoss;
+    private boolean mvpEnabled;
+    private int mvpBonus;
+    private int mvpMinTeamSize;
+    private boolean mvpShareOnTie;
 
     // --- abandonos ---
     private boolean forfeitOnLeave;
@@ -56,6 +61,7 @@ public final class RankedConfig {
     private int queueMaxRange;
     private int startTimeoutSeconds;
     private boolean blockManualJoin;
+    private boolean blockSameIp;
 
     // --- leaderboard ---
     private int leaderboardPageSize;
@@ -99,6 +105,12 @@ public final class RankedConfig {
         goalDifferenceFactor = c.getDouble("elo.goal-difference.factor", 0.18D);
         goalDifferenceMaxMultiplier = c.getDouble("elo.goal-difference.max-multiplier", 1.6D);
 
+        drawCountsAsLoss = c.getBoolean("elo.draw.counts-as-loss", true);
+        mvpEnabled = c.getBoolean("elo.mvp.enabled", true);
+        mvpBonus = c.getInt("elo.mvp.bonus", 5);
+        mvpMinTeamSize = c.getInt("elo.mvp.min-team-size", 2);
+        mvpShareOnTie = c.getBoolean("elo.mvp.share-on-tie", true);
+
         forfeitOnLeave = c.getBoolean("elo.leaver.forfeit-on-leave", true);
         leaverExtraPenalty = c.getInt("elo.leaver.extra-penalty", 25);
         protectTeammates = c.getBoolean("elo.leaver.protect-teammates", true);
@@ -110,6 +122,7 @@ public final class RankedConfig {
         queueMaxRange = c.getInt("queue.max-range", 1000);
         startTimeoutSeconds = Math.max(10, c.getInt("queue.start-timeout-seconds", 60));
         blockManualJoin = c.getBoolean("queue.block-manual-join", true);
+        blockSameIp = c.getBoolean("queue.block-same-ip", true);
 
         leaderboardPageSize = Math.max(1, c.getInt("leaderboard.page-size", 10));
         leaderboardMinMatches = c.getInt("leaderboard.min-matches", 5);
@@ -316,6 +329,30 @@ public final class RankedConfig {
 
     public boolean blockManualJoin() {
         return blockManualJoin;
+    }
+
+    public boolean blockSameIp() {
+        return blockSameIp;
+    }
+
+    public boolean drawCountsAsLoss() {
+        return drawCountsAsLoss;
+    }
+
+    public boolean mvpEnabled() {
+        return mvpEnabled;
+    }
+
+    public int mvpBonus() {
+        return mvpBonus;
+    }
+
+    public int mvpMinTeamSize() {
+        return mvpMinTeamSize;
+    }
+
+    public boolean mvpShareOnTie() {
+        return mvpShareOnTie;
     }
 
     public int leaderboardPageSize() {

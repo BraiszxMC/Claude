@@ -21,6 +21,9 @@ Sistema de **partidas rankeds con Elo** montado encima del plugin
 | **Ranking** | `/ranked top` con cache y placeholders de top N |
 | **PlaceholderAPI** | `%bbranked_elo%`, `%bbranked_rank%`, `%bbranked_position%`... |
 | **Comparativa al emparejar** | al formarse la partida, cada jugador ve el Elo/rango de su(s) rival(es) y el suyo debajo |
+| **MVP** | en modos por equipos, el maximo goleador se lleva Elo extra |
+| **Anti-multicuentas** | dos jugadores con la misma IP nunca coinciden en la misma partida |
+| **Baneos** | por jugador o por IP, temporales o permanentes, con persistencia |
 
 ---
 
@@ -243,6 +246,11 @@ de arrancar el servidor.
 > Recuerda que un 2v2 necesita **4 jugadores** en cola. El mensaje al entrar
 > te dice cuantos faltan: `(1/4)`, `(2/4)`...
 
+> **Si pruebas con dos cuentas desde el mismo ordenador**, el anti-multicuentas
+> las bloquea (misma IP) y nunca se emparejaran. Para probar en local pon
+> `queue.block-same-ip: false` en el config y acuerdate de volver a ponerlo en
+> `true` cuando abras el servidor al publico.
+
 ---
 
 ## Comandos
@@ -260,6 +268,16 @@ de arrancar el servidor.
 | `/ranked reset <jugador>` | `bbranked.admin` | reiniciar estadisticas |
 | `/ranked matches` | `bbranked.admin` | partidas ranked en curso |
 | `/ranked forceend <jugador>` | `bbranked.admin` | cancelar su partida sin tocar el Elo |
+| `/ranked ban <jugador> [tiempo] [motivo]` | `bbranked.admin` | banear del ranked |
+| `/ranked unban <jugador>` | `bbranked.admin` | quitar el baneo |
+| `/ranked banip <jugador\|ip> [tiempo] [motivo]` | `bbranked.admin` | banear una IP del ranked |
+| `/ranked unbanip <ip>` | `bbranked.admin` | quitar el baneo de IP |
+| `/ranked bans` | `bbranked.admin` | listar los baneos activos |
+
+Los tiempos se escriben `30m`, `2h`, `7d`, `1w` o `perm`. Si te saltas el
+tiempo, el baneo es permanente y todo lo que escribas se toma como motivo.
+Banear a alguien lo saca de la cola al momento, y funciona aunque este
+desconectado (se busca en la base de datos del plugin).
 
 Alias: `/rk`, `/elo`, `/bbranked`.
 
@@ -297,11 +315,23 @@ elo:
     factor: 0.18
     max-multiplier: 1.6
 
+  draw:
+    counts-as-loss: true    # el empate cuenta como derrota para los dos
+
+  mvp:
+    enabled: true           # el maximo goleador se lleva Elo extra
+    bonus: 5
+    min-team-size: 2        # no hay MVP en 1v1
+    share-on-tie: true      # si empatan a goles, lo comparten
+
   leaver:
     forfeit-on-leave: true  # abandonar = perder la partida
     extra-penalty: 25       # Elo extra que pierde el que se va
     protect-teammates: true # sus companeros no pierden Elo
     queue-ban-seconds: 300  # y no puede encolar durante 5 min
+
+queue:
+  block-same-ip: true       # anti-multicuentas (ver nota de arriba)
 
 queue:
   initial-range: 100              # diferencia de Elo aceptada al entrar

@@ -68,12 +68,21 @@ public final class EloCalculator {
         double redExpected = expectedScore(redAverage, blueAverage);
         double blueExpected = 1.0D - redExpected;
 
-        double redActual = switch (winner) {
-            case RED -> 1.0D;
-            case BLUE -> 0.0D;
-            case DRAW -> 0.5D;
-        };
-        double blueActual = 1.0D - redActual;
+        double redActual;
+        double blueActual;
+        if (winner == MatchWinner.DRAW && config.drawCountsAsLoss()) {
+            // Empate tratado como derrota para los dos: ninguno puntua, asi que
+            // los dos equipos pierden Elo respecto a lo que se esperaba de ellos.
+            redActual = 0.0D;
+            blueActual = 0.0D;
+        } else {
+            redActual = switch (winner) {
+                case RED -> 1.0D;
+                case BLUE -> 0.0D;
+                case DRAW -> 0.5D;
+            };
+            blueActual = 1.0D - redActual;
+        }
 
         double multiplier = goalMultiplier(Math.abs(redScore - blueScore), winner);
 
@@ -120,6 +129,16 @@ public final class EloCalculator {
             changes.add(new EloChange(stats.uuid(), before, after, outcome, leaver));
         }
         return changes;
+    }
+
+    /**
+     * Suma el Elo extra del MVP encima de lo que ya haya ganado o perdido.
+     * Devuelve el cambio actualizado para que el mensaje final cuadre.
+     */
+    public EloChange applyMvpBonus(PlayerStats stats, EloChange change, int bonus) {
+        int after = Math.max(config.minimumElo(), change.after() + bonus);
+        stats.elo(after);
+        return new EloChange(change.uuid(), change.before(), after, change.outcome(), change.leaver());
     }
 
     /**

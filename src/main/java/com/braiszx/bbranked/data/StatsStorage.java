@@ -1,5 +1,6 @@
 package com.braiszx.bbranked.data;
 
+import com.braiszx.bbranked.ban.BanEntry;
 import com.braiszx.bbranked.config.RankedConfig;
 import org.bukkit.plugin.Plugin;
 
@@ -33,6 +34,7 @@ public final class StatsStorage implements AutoCloseable {
     private final boolean mysql;
     private final String playersTable;
     private final String matchesTable;
+    private final String bansTable;
 
     private Connection connection;
 
@@ -42,6 +44,7 @@ public final class StatsStorage implements AutoCloseable {
         this.mysql = "mysql".equalsIgnoreCase(config.dbType());
         this.playersTable = config.tablePrefix() + "players";
         this.matchesTable = config.tablePrefix() + "matches";
+        this.bansTable = config.tablePrefix() + "bans";
         this.executor = Executors.newSingleThreadExecutor(runnable -> {
             Thread thread = new Thread(runnable, "BlockBallRanked-DB");
             thread.setDaemon(true);
@@ -125,9 +128,106 @@ public final class StatsStorage implements AutoCloseable {
                         played_at BIGINT NOT NULL
                     )""".formatted(matchesTable, autoIncrement));
 
+            statement.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS %s (
+                        target VARCHAR(48) NOT NULL,
+                        type VARCHAR(8) NOT NULL,
+                        label VARCHAR(48) NOT NULL,
+                        reason VARCHAR(255) NOT NULL,
+                        expires_at BIGINT NOT NULL,
+                        banned_by VARCHAR(48) NOT NULL,
+                        created_at BIGINT NOT NULL,
+                        PRIMARY KEY (target, type)
+                    )""".formatted(bansTable));
+
             statement.executeUpdate(
                     "CREATE INDEX IF NOT EXISTS idx_" + playersTable + "_elo ON " + playersTable + " (elo)");
         }
+    }
+
+    // ------------------------------------------------------------------
+    //  Baneos
+    // ------------------------------------------------------------------
+
+    /**
+     * Carga todos los baneos. Bloquea a proposito: se llama en onEnable para
+     * que la cache este lista antes de que nadie entre en cola.
+     */
+    public List<BanEntry> loadBansBlocking() {
+        List<BanEntry> entries = new ArrayList<>();
+        try (Statement statement = connection().createStatement();
+             ResultSet result = statement.executeQuery("SELECT * FROM " + bansTable)) {
+            while (result.next()) {
+                BanEntry.BanType type;
+                try {
+                    type = BanEntry.BanType.valueOf(result.getString("type"));
+                } catch (IllegalArgumentException exception) {
+                    continue;
+                }
+                entries.add(new BanEntry(
+                        result.getString("target"),
+                        result.getString("label"),
+                        type,
+                        result.getString("reason"),
+                        result.getLong("expires_at"),
+                        result.getString("banned_by"),
+                        result.getLong("created_at")));
+            }
+        } catch (SQLException exception) {
+            plugin.getLogger().log(Level.SEVERE, "Error cargando los baneos del ranked", exception);
+        }
+        return entries;
+    }
+
+    public CompletableFuture<Void> saveBan(BanEntry entry) {
+        return CompletableFuture.runAsync(() -> {
+            String update = "UPDATE " + bansTable + " SET label = ?, reason = ?, expires_at = ?,"
+                    + " banned_by = ?, created_at = ? WHERE target = ? AND type = ?";
+            try (PreparedStatement statement = connection().prepareStatement(update)) {
+                statement.setString(1, entry.label());
+                statement.setString(2, entry.reason());
+                statement.setLong(3, entry.expiresAt());
+                statement.setString(4, entry.bannedBy());
+                statement.setLong(5, entry.createdAt());
+                statement.setString(6, entry.target());
+                statement.setString(7, entry.type().name());
+                if (statement.executeUpdate() > 0) {
+                    return;
+                }
+            } catch (SQLException exception) {
+                plugin.getLogger().log(Level.SEVERE, "Error guardando el baneo de " + entry.target(), exception);
+                return;
+            }
+
+            String insert = "INSERT INTO " + bansTable
+                    + " (label, reason, expires_at, banned_by, created_at, target, type)"
+                    + " VALUES (?, ?, ?, ?, ?, ?, ?)";
+            try (PreparedStatement statement = connection().prepareStatement(insert)) {
+                statement.setString(1, entry.label());
+                statement.setString(2, entry.reason());
+                statement.setLong(3, entry.expiresAt());
+                statement.setString(4, entry.bannedBy());
+                statement.setLong(5, entry.createdAt());
+                statement.setString(6, entry.target());
+                statement.setString(7, entry.type().name());
+                statement.executeUpdate();
+            } catch (SQLException exception) {
+                plugin.getLogger().log(Level.SEVERE, "Error guardando el baneo de " + entry.target(), exception);
+            }
+        }, executor);
+    }
+
+    public CompletableFuture<Void> deleteBan(String target, BanEntry.BanType type) {
+        return CompletableFuture.runAsync(() -> {
+            try (PreparedStatement statement = connection().prepareStatement(
+                    "DELETE FROM " + bansTable + " WHERE target = ? AND type = ?")) {
+                statement.setString(1, target);
+                statement.setString(2, type.name());
+                statement.executeUpdate();
+            } catch (SQLException exception) {
+                plugin.getLogger().log(Level.SEVERE, "Error borrando el baneo de " + target, exception);
+            }
+        }, executor);
     }
 
     // ------------------------------------------------------------------

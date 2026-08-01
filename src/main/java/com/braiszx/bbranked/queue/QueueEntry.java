@@ -9,11 +9,13 @@ public final class QueueEntry {
 
     private final UUID uuid;
     private final int elo;
+    private final String ip;
     private final long joinedAt;
 
-    public QueueEntry(UUID uuid, int elo) {
+    public QueueEntry(UUID uuid, int elo, String ip) {
         this.uuid = uuid;
         this.elo = elo;
+        this.ip = ip;
         this.joinedAt = System.currentTimeMillis();
     }
 
@@ -23,6 +25,21 @@ public final class QueueEntry {
 
     public int elo() {
         return elo;
+    }
+
+    /**
+     * IP con la que entro en cola. Puede ser null si no se pudo leer.
+     */
+    public String ip() {
+        return ip;
+    }
+
+    /**
+     * True si comparte IP con la otra entrada. Si alguna IP es desconocida se
+     * asume que no comparten, para no bloquear a gente por error.
+     */
+    public boolean sharesIpWith(QueueEntry other) {
+        return ip != null && other.ip != null && ip.equalsIgnoreCase(other.ip);
     }
 
     public long waitedSeconds() {

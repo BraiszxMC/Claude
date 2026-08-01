@@ -1,6 +1,8 @@
 package com.braiszx.bbranked.command;
 
 import com.braiszx.bbranked.BlockBallRankedPlugin;
+import com.braiszx.bbranked.ban.BanEntry;
+import com.braiszx.bbranked.ban.BanManager;
 import com.braiszx.bbranked.config.QueueMode;
 import com.braiszx.bbranked.config.RankTier;
 import com.braiszx.bbranked.config.RankedConfig;
@@ -12,7 +14,9 @@ import com.braiszx.bbranked.match.RankedMatch;
 import com.braiszx.bbranked.queue.QueueManager;
 import com.braiszx.bbranked.util.Messages;
 import com.github.shynixn.blockball.contract.SoccerGame;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -23,6 +27,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * /ranked y sus subcomandos.
@@ -35,21 +40,23 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
     private final StatsManager stats;
     private final QueueManager queues;
     private final MatchManager matches;
+    private final BanManager bans;
 
     public RankedCommand(BlockBallRankedPlugin plugin, RankedConfig config, Messages messages,
-                         StatsManager stats, QueueManager queues, MatchManager matches) {
+                         StatsManager stats, QueueManager queues, MatchManager matches, BanManager bans) {
         this.plugin = plugin;
         this.config = config;
         this.messages = messages;
         this.stats = stats;
         this.queues = queues;
         this.matches = matches;
+        this.bans = bans;
     }
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (args.length == 0) {
-            messages.sendList(sender, "help");
+            sendHelp(sender);
             return true;
         }
 
@@ -65,9 +72,34 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
             case "check", "comprobar" -> handleCheck(sender);
             case "matches", "partidas" -> handleMatches(sender);
             case "forceend" -> handleForceEnd(sender, args);
-            default -> messages.sendList(sender, "help");
+            case "ban" -> handleBan(sender, args);
+            case "unban", "desbanear" -> handleUnban(sender, args);
+            case "banip" -> handleBanIp(sender, args);
+            case "unbanip" -> handleUnbanIp(sender, args);
+            case "bans", "baneos" -> handleBans(sender);
+            default -> sendHelp(sender);
         }
         return true;
+    }
+
+    /**
+     * Ayuda pensada para alguien que no ha jugado ranked nunca: explica que es
+     * y por donde empezar. La parte de administracion solo la ve quien puede
+     * usarla.
+     */
+    private void sendHelp(CommandSender sender) {
+        Map<String, String> placeholders = Map.of(
+                "modes", String.join(", ", config.modes().keySet()),
+                "placements", String.valueOf(config.placementMatches()));
+
+        for (Component line : messages.list("help", placeholders)) {
+            sender.sendMessage(line);
+        }
+        if (sender.hasPermission("bbranked.admin")) {
+            for (Component line : messages.list("help-admin", placeholders)) {
+                sender.sendMessage(line);
+            }
+        }
     }
 
     // ------------------------------------------------------------------
@@ -181,7 +213,16 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
             }
         }
 
-        List<LeaderboardEntry> entries = stats.leaderboard();
+        // Se consulta la base de datos directamente en vez de usar la cache:
+        // la cache se rellena de forma asincrona y el primer /ranked top tras
+        // arrancar la encontraba vacia, asi que no salia nadie en el ranking.
+        int requestedPage = page;
+        stats.storage().topPlayers(config.leaderboardPageSize() * 20, config.leaderboardMinMatches())
+                .thenAccept(entries -> Bukkit.getScheduler().runTask(plugin,
+                        () -> renderTop(sender, entries, requestedPage)));
+    }
+
+    private void renderTop(CommandSender sender, List<LeaderboardEntry> entries, int page) {
         if (entries.isEmpty()) {
             messages.sendRaw(sender, "top.empty");
             return;
@@ -261,7 +302,7 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
             return;
         }
         if (args.length < 3) {
-            messages.sendList(sender, "help");
+            sendHelp(sender);
             return;
         }
 
@@ -293,7 +334,7 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
             return;
         }
         if (args.length < 2) {
-            messages.sendList(sender, "help");
+            sendHelp(sender);
             return;
         }
 
@@ -343,7 +384,7 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
             return;
         }
         if (args.length < 2) {
-            messages.sendList(sender, "help");
+            sendHelp(sender);
             return;
         }
 
@@ -362,6 +403,197 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
     }
 
     // ------------------------------------------------------------------
+    //  Baneos
+    // ------------------------------------------------------------------
+
+    /**
+     * /ranked ban &lt;jugador&gt; [tiempo] [motivo]
+     */
+    private void handleBan(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("bbranked.admin")) {
+            messages.send(sender, "no-permission");
+            return;
+        }
+        if (args.length < 2) {
+            sendHelp(sender);
+            return;
+        }
+
+        String name = args[1];
+        long parsed = args.length >= 3 ? BanManager.parseDuration(args[2]) : -1;
+        // Si el tercer argumento no es una duracion, se toma como parte del
+        // motivo y el baneo es permanente.
+        int reasonFrom = parsed == Long.MIN_VALUE ? 2 : 3;
+        long duration = parsed == Long.MIN_VALUE ? -1 : parsed;
+        String reason = joinFrom(args, reasonFrom, "Sin motivo");
+
+        resolvePlayer(name, resolved -> {
+            if (resolved == null) {
+                messages.send(sender, "player-not-found", Map.of("player", name));
+                return;
+            }
+
+            BanEntry entry = bans.banPlayer(resolved.uuid(), resolved.name(), reason, duration, sender.getName());
+
+            // Si estaba en cola, se le saca ya.
+            Player online = Bukkit.getPlayer(resolved.uuid());
+            if (online != null && queues.remove(online.getUniqueId())) {
+                messages.send(online, "admin.kicked-from-queue");
+            }
+
+            messages.send(sender, "admin.ban-added", Map.of(
+                    "player", resolved.name(), "expires", entry.remainingText(), "reason", reason));
+        });
+    }
+
+    private void handleUnban(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("bbranked.admin")) {
+            messages.send(sender, "no-permission");
+            return;
+        }
+        if (args.length < 2) {
+            sendHelp(sender);
+            return;
+        }
+
+        String name = args[1];
+        resolvePlayer(name, resolved -> {
+            if (resolved == null) {
+                messages.send(sender, "player-not-found", Map.of("player", name));
+                return;
+            }
+            messages.send(sender, bans.unbanPlayer(resolved.uuid())
+                    ? "admin.ban-removed" : "admin.ban-not-found", Map.of("player", resolved.name()));
+        });
+    }
+
+    /**
+     * /ranked banip &lt;jugador|ip&gt; [tiempo] [motivo]
+     */
+    private void handleBanIp(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("bbranked.admin")) {
+            messages.send(sender, "no-permission");
+            return;
+        }
+        if (args.length < 2) {
+            sendHelp(sender);
+            return;
+        }
+
+        String input = args[1];
+        long duration = args.length >= 3 ? BanManager.parseDuration(args[2]) : -1;
+        int reasonFrom = duration == Long.MIN_VALUE ? 2 : 3;
+        if (duration == Long.MIN_VALUE) {
+            duration = -1;
+        }
+        String reason = joinFrom(args, reasonFrom, "Sin motivo");
+
+        // Se acepta tanto una IP directa como el nombre de alguien conectado.
+        String ip = input;
+        if (!looksLikeIp(input)) {
+            Player online = Bukkit.getPlayerExact(input);
+            if (online == null) {
+                messages.send(sender, "admin.ip-unknown", Map.of("player", input));
+                return;
+            }
+            ip = BanManager.ipOf(online);
+            if (ip == null) {
+                messages.send(sender, "admin.ip-unknown", Map.of("player", input));
+                return;
+            }
+        }
+
+        BanEntry entry = bans.banIp(ip, reason, duration, sender.getName());
+
+        // Saca de la cola a todos los que esten usando esa IP.
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            if (ip.equalsIgnoreCase(BanManager.ipOf(online)) && queues.remove(online.getUniqueId())) {
+                messages.send(online, "admin.kicked-from-queue");
+            }
+        }
+
+        messages.send(sender, "admin.ipban-added", Map.of(
+                "ip", ip, "expires", entry.remainingText(), "reason", reason));
+    }
+
+    private void handleUnbanIp(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("bbranked.admin")) {
+            messages.send(sender, "no-permission");
+            return;
+        }
+        if (args.length < 2) {
+            sendHelp(sender);
+            return;
+        }
+        messages.send(sender, bans.unbanIp(args[1])
+                ? "admin.ipban-removed" : "admin.ipban-not-found", Map.of("ip", args[1]));
+    }
+
+    private void handleBans(CommandSender sender) {
+        if (!sender.hasPermission("bbranked.admin")) {
+            messages.send(sender, "no-permission");
+            return;
+        }
+
+        List<BanEntry> active = bans.activeBans();
+        messages.sendRaw(sender, "admin.bans-header");
+        if (active.isEmpty()) {
+            messages.sendRaw(sender, "admin.bans-empty");
+            return;
+        }
+        for (BanEntry entry : active) {
+            messages.sendRaw(sender, "admin.bans-line", Map.of(
+                    "target", entry.label(),
+                    "type", entry.type() == BanEntry.BanType.IP ? "IP" : "jugador",
+                    "expires", entry.remainingText(),
+                    "reason", entry.reason()));
+        }
+    }
+
+    /**
+     * Resultado de buscar a un jugador por nombre.
+     */
+    private record ResolvedPlayer(UUID uuid, String name) {
+    }
+
+    /**
+     * Busca a un jugador por nombre, este conectado o no, y llama a
+     * {@code callback} en el hilo principal.
+     *
+     * <p>Primero mira entre los conectados, luego la cache de Bukkit y por
+     * ultimo la base de datos del propio plugin (cualquiera que haya jugado
+     * una ranked esta ahi). Asi se puede banear a alguien desconectado sin
+     * inventarse UUIDs.</p>
+     */
+    private void resolvePlayer(String name, java.util.function.Consumer<ResolvedPlayer> callback) {
+        Player online = Bukkit.getPlayerExact(name);
+        if (online != null) {
+            callback.accept(new ResolvedPlayer(online.getUniqueId(), online.getName()));
+            return;
+        }
+
+        OfflinePlayer cached = Bukkit.getOfflinePlayerIfCached(name);
+        if (cached != null && cached.getName() != null) {
+            callback.accept(new ResolvedPlayer(cached.getUniqueId(), cached.getName()));
+            return;
+        }
+
+        stats.lookup(name).thenAccept(found -> Bukkit.getScheduler().runTask(plugin, () ->
+                callback.accept(found == null ? null : new ResolvedPlayer(found.uuid(), found.name()))));
+    }
+
+    private static boolean looksLikeIp(String input) {
+        return input.matches("^[0-9.]+$") || input.contains(":");
+    }
+
+    private static String joinFrom(String[] args, int from, String fallback) {
+        if (from >= args.length) {
+            return fallback;
+        }
+        return String.join(" ", List.of(args).subList(from, args.length));
+    }
+
+    // ------------------------------------------------------------------
     //  Autocompletado
     // ------------------------------------------------------------------
 
@@ -372,17 +604,24 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             options.addAll(List.of("join", "leave", "stats", "top", "queues"));
             if (sender.hasPermission("bbranked.admin")) {
-                options.addAll(List.of("reload", "check", "setelo", "reset", "matches", "forceend"));
+                options.addAll(List.of("reload", "check", "setelo", "reset", "matches", "forceend",
+                        "ban", "unban", "banip", "unbanip", "bans"));
             }
         } else if (args.length == 2) {
             switch (args[0].toLowerCase(Locale.ROOT)) {
                 case "join", "entrar" -> options.addAll(config.modes().keySet());
-                case "stats", "elo", "setelo", "reset", "forceend" ->
+                case "stats", "elo", "setelo", "reset", "forceend", "ban", "unban", "banip" ->
                         Bukkit.getOnlinePlayers().forEach(player -> options.add(player.getName()));
+                case "unbanip" -> bans.activeBans().stream()
+                        .filter(entry -> entry.type() == BanEntry.BanType.IP)
+                        .forEach(entry -> options.add(entry.target()));
                 default -> {
                     // sin sugerencias
                 }
             }
+        } else if (args.length == 3
+                && List.of("ban", "banip").contains(args[0].toLowerCase(Locale.ROOT))) {
+            options.addAll(List.of("perm", "30m", "1h", "6h", "1d", "7d"));
         }
 
         String prefix = args[args.length - 1].toLowerCase(Locale.ROOT);

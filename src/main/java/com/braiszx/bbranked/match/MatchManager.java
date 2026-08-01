@@ -581,8 +581,24 @@ public final class MatchManager {
         List<EloChange> changes = elo.apply(red, blue, match.redScore(), match.blueScore(),
                 winner, new HashSet<>(match.leavers()));
 
+        // El MVP se aplica encima del Elo ya calculado, para que el mensaje
+        // final muestre el total real.
+        Set<UUID> mvps = resolveMvps(match);
+        int mvpGoals = mvps.isEmpty() ? 0 : match.goals().getOrDefault(mvps.iterator().next(), 0);
+        if (!mvps.isEmpty()) {
+            List<EloChange> adjusted = new ArrayList<>(changes.size());
+            for (EloChange change : changes) {
+                if (mvps.contains(change.uuid())) {
+                    adjusted.add(elo.applyMvpBonus(stats.require(change.uuid()), change, config.mvpBonus()));
+                } else {
+                    adjusted.add(change);
+                }
+            }
+            changes = adjusted;
+        }
+
         for (EloChange change : changes) {
-            sendResult(match, change, before.get(change.uuid()), winner);
+            sendResult(match, change, before.get(change.uuid()), winner, mvps, mvpGoals);
         }
 
         List<PlayerStats> all = new ArrayList<>(red);
@@ -603,7 +619,42 @@ public final class MatchManager {
         }
     }
 
-    private void sendResult(RankedMatch match, EloChange change, RankTier previousRank, MatchWinner winner) {
+    /**
+     * Quien se lleva el MVP: el que mas goles haya marcado en la partida.
+     *
+     * <p>Solo se da en modos por equipos (en un 1v1 no aporta nada) y solo si
+     * alguien ha marcado. Si varios empatan a goles, se lo llevan todos o
+     * ninguno segun {@code elo.mvp.share-on-tie}.</p>
+     */
+    private Set<UUID> resolveMvps(RankedMatch match) {
+        if (!config.mvpEnabled() || match.mode().teamSize() < config.mvpMinTeamSize()) {
+            return Set.of();
+        }
+
+        int best = 0;
+        for (int goals : match.goals().values()) {
+            best = Math.max(best, goals);
+        }
+        if (best <= 0) {
+            return Set.of();
+        }
+
+        Set<UUID> mvps = new HashSet<>();
+        for (Map.Entry<UUID, Integer> entry : match.goals().entrySet()) {
+            // Un abandono no se lleva el MVP aunque fuera el maximo goleador.
+            if (entry.getValue() == best && !match.leavers().contains(entry.getKey())) {
+                mvps.add(entry.getKey());
+            }
+        }
+
+        if (mvps.size() > 1 && !config.mvpShareOnTie()) {
+            return Set.of();
+        }
+        return mvps;
+    }
+
+    private void sendResult(RankedMatch match, EloChange change, RankTier previousRank, MatchWinner winner,
+                            Set<UUID> mvps, int mvpGoals) {
         Player player = Bukkit.getPlayer(change.uuid());
         if (player == null) {
             return;
@@ -631,6 +682,18 @@ public final class MatchManager {
                     "delta", String.valueOf(delta)));
         } else {
             messages.sendRaw(player, "result.elo-same", Map.of("new", String.valueOf(change.after())));
+        }
+
+        if (!mvps.isEmpty()) {
+            if (mvps.contains(change.uuid())) {
+                messages.sendRaw(player, "result.mvp-self", Map.of(
+                        "goals", String.valueOf(mvpGoals),
+                        "bonus", String.valueOf(config.mvpBonus())));
+            } else {
+                messages.sendRaw(player, "result.mvp-other", Map.of(
+                        "players", names(new ArrayList<>(mvps)),
+                        "goals", String.valueOf(mvpGoals)));
+            }
         }
 
         RankTier newRank = config.rankOf(change.after());

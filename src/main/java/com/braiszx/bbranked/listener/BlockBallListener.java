@@ -1,5 +1,7 @@
 package com.braiszx.bbranked.listener;
 
+import com.braiszx.bbranked.ban.BanEntry;
+import com.braiszx.bbranked.ban.BanManager;
 import com.braiszx.bbranked.config.RankedConfig;
 import com.braiszx.bbranked.match.MatchManager;
 import com.braiszx.bbranked.match.RankedMatch;
@@ -15,6 +17,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 
+import java.util.Map;
+
 /**
  * Puente entre los eventos de BlockBall y el sistema ranked.
  */
@@ -24,12 +28,15 @@ public final class BlockBallListener implements Listener {
     private final Messages messages;
     private final MatchManager matches;
     private final QueueManager queues;
+    private final BanManager bans;
 
-    public BlockBallListener(RankedConfig config, Messages messages, MatchManager matches, QueueManager queues) {
+    public BlockBallListener(RankedConfig config, Messages messages, MatchManager matches,
+                             QueueManager queues, BanManager bans) {
         this.config = config;
         this.messages = messages;
         this.matches = matches;
         this.queues = queues;
+        this.bans = bans;
     }
 
     /**
@@ -46,6 +53,15 @@ public final class BlockBallListener implements Listener {
         }
         if (matches.isRankedArena(event.getGame().getArena().getName())) {
             event.setCancelled(true);
+            // Un baneado que intente colarse en la arena recibe el motivo real
+            // en vez del mensaje generico.
+            BanEntry ban = bans.activeBanFor(player);
+            if (ban != null) {
+                messages.send(player, ban.type() == BanEntry.BanType.IP
+                                ? "queue.ip-banned" : "queue.ranked-banned",
+                        Map.of("reason", ban.reason(), "expires", ban.remainingText()));
+                return;
+            }
             messages.send(player, "match.blocked-join");
         }
     }

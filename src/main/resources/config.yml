@@ -45,6 +45,25 @@ elo:
   min-gain: 1
   min-loss: 1
 
+  # Que pasa cuando la partida acaba en empate.
+  draw:
+    # true  -> el empate cuenta como DERROTA para los dos equipos: los dos
+    #          pierden Elo y se les suma una derrota en el historial.
+    # false -> empate de verdad: no se mueve el Elo y se suma un empate.
+    counts-as-loss: true
+
+  # MVP: el que mas goles marque en la partida se lleva Elo extra.
+  mvp:
+    enabled: true
+    # Elo extra que se lleva el MVP (se suma a lo que gane o pierda).
+    bonus: 5
+    # Tamano minimo de equipo para que haya MVP. Con 2, el 1v1 queda fuera
+    # (en un 1v1 el MVP no tiene sentido).
+    min-team-size: 2
+    # Si varios empatan a goles, se lo llevan todos. Si lo pones en false,
+    # cuando hay empate no se da MVP a nadie.
+    share-on-tie: true
+
   goal-difference:
     # Si se activa, ganar 5-0 da mas Elo que ganar 1-0.
     enabled: true
@@ -77,6 +96,10 @@ queue:
   start-timeout-seconds: 60
   # Si es true, nadie puede entrar a una arena ranked con /blockball join.
   block-manual-join: true
+  # Anti-multicuentas: dos jugadores con la misma IP nunca acaban en la misma
+  # partida ranked (ni como rivales ni como companeros). Se quedan en cola
+  # hasta que aparezca alguien mas con quien jugar.
+  block-same-ip: true
 
 # Modos de juego. Puedes crear los que quieras.
 modes:
@@ -129,8 +152,12 @@ leaderboard:
   # Entradas por pagina en /ranked top.
   page-size: 10
   # Partidas minimas para aparecer en el top.
-  min-matches: 5
-  # Cada cuantos segundos se refresca la cache del top.
+  # OJO: si lo subes, los jugadores nuevos no salen en /ranked top hasta que
+  # lleguen a ese numero de partidas. Con 0 sale todo el mundo.
+  min-matches: 0
+  # Cada cuantos segundos se refresca la cache usada por los placeholders
+  # (%bbranked_top_name_1%, %bbranked_position%...). El comando /ranked top
+  # siempre consulta la base de datos directamente.
   refresh-seconds: 60
 
 # Anuncia el resultado de las partidas ranked a todo el servidor.

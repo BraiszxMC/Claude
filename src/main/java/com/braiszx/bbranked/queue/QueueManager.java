@@ -1,5 +1,7 @@
 package com.braiszx.bbranked.queue;
 
+import com.braiszx.bbranked.ban.BanEntry;
+import com.braiszx.bbranked.ban.BanManager;
 import com.braiszx.bbranked.config.QueueMode;
 import com.braiszx.bbranked.config.RankedConfig;
 import com.braiszx.bbranked.data.StatsManager;
@@ -26,6 +28,7 @@ public final class QueueManager {
     private final Messages messages;
     private final StatsManager stats;
     private final MatchManager matches;
+    private final BanManager bans;
 
     /** modo -> jugadores en cola, en orden de llegada. */
     private final Map<String, List<QueueEntry>> queues = new ConcurrentHashMap<>();
@@ -34,11 +37,13 @@ public final class QueueManager {
     /** jugador -> momento (millis) hasta el que no puede encolar por abandono. */
     private final Map<UUID, Long> penalties = new ConcurrentHashMap<>();
 
-    public QueueManager(RankedConfig config, Messages messages, StatsManager stats, MatchManager matches) {
+    public QueueManager(RankedConfig config, Messages messages, StatsManager stats, MatchManager matches,
+                        BanManager bans) {
         this.config = config;
         this.messages = messages;
         this.stats = stats;
         this.matches = matches;
+        this.bans = bans;
     }
 
     // ------------------------------------------------------------------
@@ -50,6 +55,13 @@ public final class QueueManager {
 
         if (matches.isInMatch(uuid)) {
             messages.send(player, "queue.already-in-match");
+            return false;
+        }
+
+        BanEntry ban = bans.activeBanFor(player);
+        if (ban != null) {
+            messages.send(player, ban.type() == BanEntry.BanType.IP ? "queue.ip-banned" : "queue.ranked-banned",
+                    Map.of("reason", ban.reason(), "expires", ban.remainingText()));
             return false;
         }
 
@@ -70,7 +82,7 @@ public final class QueueManager {
         }
 
         List<QueueEntry> queue = queues.computeIfAbsent(mode.id(), key -> Collections.synchronizedList(new ArrayList<>()));
-        queue.add(new QueueEntry(uuid, stats.getOrDefault(player).elo()));
+        queue.add(new QueueEntry(uuid, stats.getOrDefault(player).elo(), BanManager.ipOf(player)));
         playerQueue.put(uuid, mode.id());
 
         messages.send(player, "queue.joined", Map.of(
@@ -283,6 +295,12 @@ public final class QueueManager {
 
         int candidateRange = candidate.acceptedRange(initial, perSecond, max);
         for (QueueEntry member : group) {
+            // Anti-multicuentas: nadie comparte partida con su propia IP.
+            // Se comprueba contra todo el grupo, no solo contra el equipo
+            // rival, porque los equipos se reparten despues segun el Elo.
+            if (config.blockSameIp() && candidate.sharesIpWith(member)) {
+                return false;
+            }
             int difference = Math.abs(member.elo() - candidate.elo());
             if (difference > candidateRange) {
                 return false;
