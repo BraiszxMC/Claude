@@ -32,6 +32,8 @@ import java.util.Set;
 import java.util.StringJoiner;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -187,9 +189,20 @@ public final class MatchManager {
     /**
      * Intenta arrancar una partida con los jugadores dados.
      *
-     * @return true si la partida ha arrancado
+     * <p>BlockBall marca <code>GameJoinEvent</code>/<code>GameLeaveEvent</code>
+     * como eventos asincronos (<code>BlockBallEvent(true)</code> en su
+     * codigo), y Bukkit lanza <code>IllegalStateException</code> si se
+     * disparan desde el hilo principal ("... may only be triggered
+     * asynchronously"). Por eso la parte que llama a {@code game.join()} se
+     * ejecuta fuera del hilo principal, y solo se vuelve a el para tocar
+     * nuestro propio estado y mandar mensajes.</p>
+     *
+     * @param onJoinFailure se ejecuta en el hilo principal si al final no se
+     *                      ha podido meter a todo el mundo en la arena
+     * @return true si se ha lanzado el intento (reservando la arena); no
+     *         implica que la partida vaya a arrancar, para eso esta {@code onJoinFailure}
      */
-    public boolean startMatch(QueueMode mode, List<Player> players) {
+    public boolean startMatch(QueueMode mode, List<Player> players, Runnable onJoinFailure) {
         if (players.size() != mode.requiredPlayers()) {
             return false;
         }
@@ -217,6 +230,19 @@ public final class MatchManager {
             authorizedJoins.add(player.getUniqueId());
         }
 
+        String finalArenaName = arenaName;
+        SoccerGame finalGame = game;
+        offPrimaryThread(() -> performJoins(mode, finalArenaName, finalGame, redPlayers, bluePlayers,
+                players, onJoinFailure));
+        return true;
+    }
+
+    /**
+     * Mete a todos los jugadores en la arena. Se ejecuta fuera del hilo
+     * principal (ver {@link #startMatch}).
+     */
+    private void performJoins(QueueMode mode, String arenaName, SoccerGame game, List<Player> redPlayers,
+                              List<Player> bluePlayers, List<Player> players, Runnable onJoinFailure) {
         List<UUID> actualRed = new ArrayList<>();
         List<UUID> actualBlue = new ArrayList<>();
         List<Player> joined = new ArrayList<>();
@@ -233,10 +259,6 @@ public final class MatchManager {
             plugin.getLogger().warning("Error metiendo jugadores en la arena " + arenaName + ": "
                     + exception.getMessage());
             ok = false;
-        } finally {
-            for (Player player : players) {
-                authorizedJoins.remove(player.getUniqueId());
-            }
         }
 
         if (!ok) {
@@ -247,25 +269,38 @@ public final class MatchManager {
                     // la arena puede haber cambiado de estado, nada que hacer
                 }
             }
-            reservedArenas.remove(arenaName.toLowerCase(Locale.ROOT));
+        }
+
+        boolean succeeded = ok;
+        Bukkit.getScheduler().runTask(plugin, () -> {
             for (Player player : players) {
-                messages.send(player, "match.cancelled");
+                authorizedJoins.remove(player.getUniqueId());
             }
-            return false;
-        }
 
-        RankedMatch match = new RankedMatch(mode, arenaName, actualRed, actualBlue);
-        matches.put(match.id(), match);
-        games.put(match.id(), game);
-        for (UUID uuid : match.allPlayers()) {
-            byPlayer.put(uuid, match);
-        }
+            if (!succeeded) {
+                reservedArenas.remove(arenaName.toLowerCase(Locale.ROOT));
+                for (Player player : players) {
+                    messages.send(player, "match.cancelled");
+                }
+                if (onJoinFailure != null) {
+                    onJoinFailure.run();
+                }
+                return;
+            }
 
-        Map<String, String> placeholders = Map.of("arena", arenaName, "mode", mode.displayName());
-        for (Player player : players) {
-            messages.send(player, "match.found", placeholders);
-        }
-        return true;
+            RankedMatch match = new RankedMatch(mode, arenaName, actualRed, actualBlue);
+            matches.put(match.id(), match);
+            games.put(match.id(), game);
+            for (UUID uuid : match.allPlayers()) {
+                byPlayer.put(uuid, match);
+            }
+
+            Map<String, String> placeholders = Map.of("arena", arenaName, "mode", mode.displayName());
+            for (Player player : players) {
+                messages.send(player, "match.found", placeholders);
+            }
+            sendMatchupComparison(match);
+        });
     }
 
     /**
@@ -288,6 +323,55 @@ public final class MatchManager {
 
         joined.add(player);
         return true;
+    }
+
+    /**
+     * Manda a cada jugador un mensaje con el Elo y el rango de su(s) rival(es),
+     * y debajo el suyo, para que pueda comparar de un vistazo.
+     */
+    private void sendMatchupComparison(RankedMatch match) {
+        for (UUID uuid : match.allPlayers()) {
+            Player player = Bukkit.getPlayer(uuid);
+            if (player == null) {
+                continue;
+            }
+
+            Team team = match.teamOf(uuid);
+            List<UUID> rivals = team == Team.RED ? match.blue() : match.red();
+            PlayerStats own = stats.getOrDefault(player);
+            RankTier ownRank = config.rankOf(own.elo());
+
+            messages.sendRaw(player, "matchup.header");
+            for (UUID rivalUuid : rivals) {
+                PlayerStats rivalStats = stats.cached(rivalUuid);
+                if (rivalStats == null) {
+                    continue;
+                }
+                RankTier rivalRank = config.rankOf(rivalStats.elo());
+                messages.sendRaw(player, "matchup.rival", Map.of(
+                        "player", rivalStats.name(),
+                        "elo", String.valueOf(rivalStats.elo()),
+                        "rank", rivalRank.displayName()));
+            }
+            messages.sendRaw(player, "matchup.you", Map.of(
+                    "player", own.name(),
+                    "elo", String.valueOf(own.elo()),
+                    "rank", ownRank.displayName()));
+            messages.sendRaw(player, "matchup.footer");
+        }
+    }
+
+    /**
+     * Ejecuta {@code action} fuera del hilo principal. BlockBall exige que
+     * quien llame a {@code join}/{@code leave}/{@code close} no este en el
+     * hilo principal, porque sus eventos son asincronos.
+     */
+    private void offPrimaryThread(Runnable action) {
+        if (Bukkit.isPrimaryThread()) {
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, action);
+        } else {
+            action.run();
+        }
     }
 
     /**
@@ -610,12 +694,17 @@ public final class MatchManager {
         if (closeGame) {
             SoccerGame game = games.get(match.id());
             if (game != null && !game.isDisposed()) {
-                try {
-                    game.close();
-                } catch (RuntimeException exception) {
-                    plugin.getLogger().warning("Error cerrando la arena " + match.arenaName()
-                            + ": " + exception.getMessage());
-                }
+                // close() dispara GameLeaveEvent por cada jugador, y ese
+                // evento es asincrono: no se puede llamar desde el hilo
+                // principal (ver startMatch).
+                offPrimaryThread(() -> {
+                    try {
+                        game.close();
+                    } catch (RuntimeException exception) {
+                        plugin.getLogger().warning("Error cerrando la arena " + match.arenaName()
+                                + ": " + exception.getMessage());
+                    }
+                });
             }
         }
 
@@ -654,16 +743,63 @@ public final class MatchManager {
 
     /**
      * Cierra todas las partidas ranked, por ejemplo al apagar el servidor.
+     *
+     * <p>No puede usar {@link #abort} tal cual: ese metodo lanza el cierre
+     * de la arena con {@code runTaskAsynchronously} sin esperar a que
+     * termine, y durante el apagado el servidor puede cancelar esa tarea
+     * antes de que llegue a ejecutarse. Aqui se cierra en un hilo aparte y se
+     * espera (con limite) a que acabe antes de que <code>onDisable</code>
+     * continue.</p>
      */
     public void shutdown() {
+        List<SoccerGame> toClose = new ArrayList<>();
         for (RankedMatch match : new ArrayList<>(matches.values())) {
-            abort(match, true);
-            cleanup(match);
+            if (!match.settled()) {
+                match.settled(true);
+                broadcast(match, messages.get("match.aborted"));
+            }
+            SoccerGame game = games.get(match.id());
+            if (game != null && !game.isDisposed()) {
+                toClose.add(game);
+            }
+            for (UUID uuid : match.allPlayers()) {
+                byPlayer.remove(uuid);
+            }
         }
         matches.clear();
         games.clear();
         byPlayer.clear();
         reservedArenas.clear();
+
+        if (toClose.isEmpty()) {
+            return;
+        }
+
+        CountDownLatch latch = new CountDownLatch(1);
+        Thread thread = new Thread(() -> {
+            for (SoccerGame game : toClose) {
+                try {
+                    if (!game.isDisposed()) {
+                        game.close();
+                    }
+                } catch (RuntimeException exception) {
+                    plugin.getLogger().warning("Error cerrando una arena ranked al apagar: "
+                            + exception.getMessage());
+                }
+            }
+            latch.countDown();
+        }, "BlockBallRanked-Shutdown");
+        thread.setDaemon(true);
+        thread.start();
+
+        try {
+            if (!latch.await(5, TimeUnit.SECONDS)) {
+                plugin.getLogger().warning("El plugin se esta apagando sin esperar a que todas las"
+                        + " arenas ranked terminen de cerrarse.");
+            }
+        } catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     /**

@@ -211,19 +211,30 @@ public final class QueueManager {
             remove(entry.uuid());
         }
 
-        if (!matches.startMatch(mode, players)) {
-            // No se ha podido arrancar: vuelven a la cola conservando su Elo.
-            List<QueueEntry> target = queues.computeIfAbsent(mode.id(),
-                    key -> Collections.synchronizedList(new ArrayList<>()));
-            for (QueueEntry entry : group) {
-                if (Bukkit.getPlayer(entry.uuid()) != null) {
-                    target.add(entry);
-                    playerQueue.put(entry.uuid(), mode.id());
-                }
-            }
+        // startMatch mete a los jugadores en la arena fuera del hilo principal
+        // (BlockBall lo exige) y solo se sabe si ha ido bien mas tarde: por
+        // eso el reintento va en un callback en vez de en el valor devuelto.
+        boolean dispatched = matches.startMatch(mode, players, () -> requeue(mode, group));
+        if (!dispatched) {
+            requeue(mode, group);
             return false;
         }
         return true;
+    }
+
+    /**
+     * Devuelve un grupo a la cola conservando su Elo y su tiempo de espera
+     * original.
+     */
+    private void requeue(QueueMode mode, List<QueueEntry> group) {
+        List<QueueEntry> target = queues.computeIfAbsent(mode.id(),
+                key -> Collections.synchronizedList(new ArrayList<>()));
+        for (QueueEntry entry : group) {
+            if (Bukkit.getPlayer(entry.uuid()) != null) {
+                target.add(entry);
+                playerQueue.put(entry.uuid(), mode.id());
+            }
+        }
     }
 
     /**

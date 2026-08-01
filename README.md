@@ -20,6 +20,7 @@ Sistema de **partidas rankeds con Elo** montado encima del plugin
 | **Persistencia** | SQLite (por defecto) o MySQL, con historial de partidas |
 | **Ranking** | `/ranked top` con cache y placeholders de top N |
 | **PlaceholderAPI** | `%bbranked_elo%`, `%bbranked_rank%`, `%bbranked_position%`... |
+| **Comparativa al emparejar** | al formarse la partida, cada jugador ve el Elo/rango de su(s) rival(es) y el suyo debajo |
 
 ---
 
@@ -54,7 +55,7 @@ Paquete `com.github.shynixn.blockball.event`:
 | `GameEndEvent` | recoger el ganador (`getWinningTeam()`) |
 | `GameLeaveEvent` | detectar abandonos |
 
-**Dos detalles importantes de la API que condicionan el diseño:**
+**Tres detalles importantes de la API que condicionan el diseño:**
 
 1. `GameEndEvent` **no se dispara en los empates**. BlockBall solo lo lanza
    desde `onWin(team)`; cuando se acaba el tiempo con marcador igualado llama
@@ -67,6 +68,22 @@ Paquete `com.github.shynixn.blockball.event`:
    `reload(arena)` en cuanto ve `isDisposed`). Por eso el plugin guarda la
    *referencia* al `SoccerGame` en vez de buscarlo por nombre cada tick: si no,
    leeria el marcador 0-0 de la partida recien reiniciada.
+3. `GameJoinEvent`, `GameLeaveEvent` y el resto de eventos de partida heredan
+   de `BlockBallEvent(isAsync = true)`: BlockBall los marca como asincronos a
+   proposito. Bukkit **prohibe por contrato** disparar un evento asincrono
+   desde el hilo principal (lanza `IllegalStateException: ... may only be
+   triggered asynchronously`), asi que `game.join()`, `game.leave()` y
+   `game.close()` **no se pueden llamar desde el hilo principal**. El
+   emparejamiento y el tick del servidor si corren en el hilo principal, asi
+   que `MatchManager.startMatch()` reserva la arena de forma sincrona pero
+   despacha la llamada real a `game.join()` con
+   `Bukkit.getScheduler().runTaskAsynchronously(...)`, y solo vuelve al hilo
+   principal (via `runTask`) para tocar el estado propio del plugin y mandar
+   mensajes. Lo mismo aplica a `game.close()` en `abort()`. Durante
+   `onDisable()` no se puede depender del scheduler asincrono (el servidor
+   puede cancelar las tareas pendientes de un plugin justo despues de que
+   `onDisable()` retorne), asi que `shutdown()` usa un `Thread` aparte con
+   espera acotada (`CountDownLatch`, 5s) en vez del scheduler de Bukkit.
 
 ### Formula del Elo
 

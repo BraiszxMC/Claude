@@ -30,6 +30,13 @@ match:
   blocked-join: "<red>Esta arena es ranked. Usa <white>/ranked join</white>."
   leaver-forfeit: "<red>{player} ha abandonado. Su equipo pierde la partida."
 
+# Se manda al formarse la partida, para comparar tu Elo con el de tu(s) rival(es).
+matchup:
+  header: "<gray>-------- <white>Rival encontrado</white> <gray>--------"
+  rival: "<red>Rival:</red> <white>{player}</white> <gray>- <white>{elo}</white> Elo <gray>(<reset>{rank}<gray>)"
+  you: "<green>Tu:</green> <white>{player}</white> <gray>- <white>{elo}</white> Elo <gray>(<reset>{rank}<gray>)"
+  footer: "<gray>--------------------------------"
+
 result:
   header: "<gray>-------- <white>Resultado ranked</white> <gray>--------"
   score: "<gray>Marcador: <red>{red}</red> <gray>-</gray> <blue>{blue}</blue>"
