@@ -1,0 +1,262 @@
+# =====================================================================
+#  ModeracionX  -  configuracion principal
+#  Todo lo que hay aqui es modificable. Tras editar usa /mx recargar
+# =====================================================================
+
+general:
+  # Idioma / textos -> mensajes.yml
+  # Prefijo global usado por %prefijo% en mensajes.yml
+  prefijo: '<gradient:#ff4b4b:#ff9d00><bold>ModeracionX</bold></gradient> <dark_gray>»<reset> '
+  # Zona horaria y formato de fechas del historial
+  formato-fecha: 'dd/MM/yyyy HH:mm'
+  zona-horaria: 'Europe/Madrid'
+  # Comprobar sanciones expiradas cada X segundos
+  intervalo-revision-segundos: 30
+  # Avisar por consola cuando se aplique una sancion
+  log-consola: true
+  # Guardar todas las sanciones tambien en logs/sanciones.log
+  log-archivo: true
+
+almacenamiento:
+  # SQLITE (recomendado) o YAML
+  tipo: SQLITE
+  # Nombre del fichero de base de datos dentro de la carpeta del plugin
+  archivo: 'datos/moderacionx.db'
+
+sanciones:
+  # Razon usada cuando el staff no escribe ninguna
+  razon-por-defecto: 'No se especifico una razon'
+  # Duracion por defecto de /ban si no se indica tiempo.
+  # 'permanente' o un tiempo tipo 7d, 12h, 30m...
+  duracion-ban-por-defecto: 'permanente'
+  duracion-mute-por-defecto: '1h'
+  # Duracion maxima que puede aplicar alguien SIN el permiso moderacionx.ban.permanente
+  duracion-maxima-sin-permiso: '30d'
+  # Permitir sancionar a jugadores que nunca han entrado al servidor
+  permitir-offline: true
+  # Impedir que el staff se sancione a si mismo
+  bloquear-auto-sancion: true
+  # Si el objetivo tiene el permiso moderacionx.exento.<tipo> no se le puede sancionar
+  respetar-exenciones: true
+  # Al banear a un jugador, banear tambien su ultima IP
+  banear-ip-al-banear: false
+  # Anunciar la sancion a todo el servidor (si es false solo lo ve el staff)
+  anunciar-a-todos: true
+  # Se puede forzar el silencio anadiendo -s al final del comando
+  bandera-silenciosa: '-s'
+
+advertencias:
+  activado: true
+  # Las advertencias caducan pasado este tiempo (0 o 'nunca' para no caducar)
+  caducidad: '30d'
+  # Acciones automaticas al llegar a X advertencias activas.
+  # Se ejecutan por consola. Placeholders: %jugador% %uuid% %ip% %cantidad%
+  acciones:
+    3: 'tempmute %jugador% 1h Acumulacion de advertencias (%cantidad%)'
+    5: 'tempban %jugador% 1d Acumulacion de advertencias (%cantidad%)'
+    8: 'ban %jugador% permanente Acumulacion de advertencias (%cantidad%)'
+
+historial:
+  # Sanciones mostradas por pagina en /historial
+  lineas-por-pagina: 8
+  # Mostrar tambien las sanciones ya caducadas o retiradas
+  mostrar-inactivas: true
+
+antivpn:
+  activado: true
+  # KICK  -> se le impide entrar
+  # BAN   -> se le impide entrar y se registra un baneo
+  # AVISAR-> entra igual pero se avisa al staff
+  accion: KICK
+  # Bloquear tambien IPs de datacenter / hosting (muchos proxies)
+  bloquear-hosting: true
+  # Minutos que se guarda en cache el resultado de una IP
+  cache-minutos: 120
+  # Milisegundos maximos de espera por proveedor
+  timeout-ms: 4000
+  # Si TODOS los proveedores fallan: true = dejar entrar, false = no dejar entrar
+  fallar-abierto: true
+  # Avisar al staff con permiso moderacionx.notificaciones cuando se detecte una VPN
+  avisar-staff: true
+  # No comprobar estas IPs (admite * al final -> 192.168.*)
+  ips-whitelist:
+    - '127.0.0.1'
+    - 'localhost'
+    - '10.*'
+    - '172.16.*'
+    - '192.168.*'
+  # Nombres exactos que nunca se comprueban
+  jugadores-whitelist: []
+  # Los jugadores con moderacionx.antivpn.bypass quedan exentos automaticamente
+  # (se recuerda su UUID tras su primera conexion)
+  recordar-bypass: true
+  # Proveedores consultados en orden hasta obtener una respuesta valida.
+  # %ip% se sustituye por la IP del jugador.
+  # ruta: camino dentro del JSON separado por puntos (admite %ip% como clave)
+  proveedores:
+    - nombre: 'proxycheck.io'
+      activado: true
+      url: 'https://proxycheck.io/v2/%ip%?vpn=1&asn=1'
+      ruta: '%ip%.proxy'
+      valores-positivos: [ 'yes', 'true' ]
+      ruta-hosting: '%ip%.type'
+      valores-hosting: [ 'Hosting', 'Compromised Server', 'SOCKS', 'VPN' ]
+      cabeceras: {}
+    - nombre: 'ip-api.com'
+      activado: true
+      url: 'http://ip-api.com/json/%ip%?fields=status,proxy,hosting'
+      ruta: 'proxy'
+      valores-positivos: [ 'true' ]
+      ruta-hosting: 'hosting'
+      valores-hosting: [ 'true' ]
+      cabeceras: {}
+    - nombre: 'ipwho.is'
+      activado: false
+      url: 'https://ipwho.is/%ip%'
+      ruta: 'security.proxy'
+      valores-positivos: [ 'true' ]
+      ruta-hosting: 'security.hosting'
+      valores-hosting: [ 'true' ]
+      cabeceras: {}
+
+espia:
+  # /spy - ver los comandos que ejecutan los jugadores
+  activado: true
+  # Recordar quien tenia el spy activado tras reiniciar
+  persistente: true
+  # Formato de la linea del espia
+  formato: '<dark_gray>[<gold>SPY<dark_gray>] <gray>%jugador% <dark_gray>› <white>%comando%'
+  # Mostrar tambien los comandos ejecutados desde consola
+  incluir-consola: false
+  # Mostrarte tus propios comandos
+  verse-a-uno-mismo: false
+  # Estos comandos NO se muestran nunca
+  comandos-ignorados:
+    - 'msg'
+    - 'r'
+    - 'tell'
+  # Estos comandos se muestran con los argumentos ocultos (contrasenas)
+  comandos-censurados:
+    - 'login'
+    - 'register'
+    - 'l'
+    - 'reg'
+    - 'cambiarpass'
+    - 'changepassword'
+  # Guardar todos los comandos en logs/comandos.log
+  guardar-en-archivo: true
+  # Mostrar tambien los mensajes de chat normales
+  incluir-chat: false
+
+invsee:
+  # Si es true solo se puede mirar; hace falta moderacionx.invsee.editar para tocar items
+  solo-lectura: true
+  # Avisar al jugador de que alguien le esta mirando el inventario
+  avisar-al-objetivo: false
+  # Titulo del inventario en modo detallado (/invsee <jugador> completo)
+  titulo-detallado: '<dark_gray>Inventario de <white>%jugador%'
+  # Cerrar la vista automaticamente si el objetivo se desconecta
+  cerrar-al-desconectar: true
+
+gamemode:
+  # Avisar al jugador cuando otro le cambia el modo de juego
+  avisar-al-objetivo: true
+  # Nombres aceptados para cada modo (ademas de 0/1/2/3)
+  alias:
+    survival: [ 's', 'sv', 'sup', 'survival', 'supervivencia' ]
+    creative: [ 'c', 'cr', 'creative', 'creativo' ]
+    adventure: [ 'a', 'ad', 'adventure', 'aventura' ]
+    spectator: [ 'sp', 'esp', 'spectator', 'espectador' ]
+
+anuncio:
+  # Lineas enviadas al chat. %mensaje% = texto escrito por el staff
+  formato:
+    - ''
+    - '<gradient:#ff4b4b:#ff9d00><bold>» ANUNCIO «</bold></gradient>'
+    - '<white>%mensaje%'
+    - ''
+  titulo:
+    activado: false
+    titulo: '<gradient:#ff4b4b:#ff9d00><bold>ANUNCIO</bold></gradient>'
+    subtitulo: '<white>%mensaje%'
+    aparecer-ticks: 10
+    quedarse-ticks: 60
+    desaparecer-ticks: 10
+  sonido:
+    activado: true
+    clave: 'minecraft:block.note_block.pling'
+    volumen: 1.0
+    tono: 1.2
+  # Enviar tambien el anuncio a la consola
+  a-consola: true
+
+ayuda:
+  # /help sustituye al menu de ayuda de Minecraft
+  sustituir-vanilla: true
+  # Solo se muestran las lineas cuyo permiso tenga el jugador ('' = todos)
+  lineas-por-pagina: 8
+  cabecera: '<dark_gray><strikethrough>                    </strikethrough> <gradient:#ff4b4b:#ff9d00><bold>AYUDA</bold></gradient> <gray>(%pagina%/%paginas%) <dark_gray><strikethrough>                    </strikethrough>'
+  # %comando% y %descripcion% se insertan tal cual (no hace falta escapar nada)
+  formato-linea: '<white>%comando% <dark_gray>- <gray>%descripcion%'
+  pie: '<dark_gray>Usa <white>/help [pagina] <dark_gray>para ver mas.'
+  entradas:
+    - comando: '/ban <jugador> [tiempo] [razon]'
+      descripcion: 'Banea a un jugador'
+      permiso: 'moderacionx.ban'
+    - comando: '/tempban <jugador> <tiempo> [razon]'
+      descripcion: 'Baneo temporal'
+      permiso: 'moderacionx.tempban'
+    - comando: '/unban <jugador>'
+      descripcion: 'Quita un baneo'
+      permiso: 'moderacionx.unban'
+    - comando: '/banip <jugador|ip> [tiempo] [razon]'
+      descripcion: 'Banea una IP'
+      permiso: 'moderacionx.banip'
+    - comando: '/unbanip <jugador|ip>'
+      descripcion: 'Quita el baneo de una IP'
+      permiso: 'moderacionx.unbanip'
+    - comando: '/kick <jugador> [razon]'
+      descripcion: 'Expulsa a un jugador'
+      permiso: 'moderacionx.kick'
+    - comando: '/mute <jugador> [tiempo] [razon]'
+      descripcion: 'Silencia a un jugador'
+      permiso: 'moderacionx.mute'
+    - comando: '/unmute <jugador>'
+      descripcion: 'Quita el silencio'
+      permiso: 'moderacionx.unmute'
+    - comando: '/warn <jugador> [razon]'
+      descripcion: 'Advierte a un jugador'
+      permiso: 'moderacionx.warn'
+    - comando: '/historial <jugador>'
+      descripcion: 'Registro de sanciones'
+      permiso: 'moderacionx.historial'
+    - comando: '/invsee <jugador> [completo]'
+      descripcion: 'Ver el inventario de alguien'
+      permiso: 'moderacionx.invsee'
+    - comando: '/echest <jugador>'
+      descripcion: 'Ver el ender chest de alguien'
+      permiso: 'moderacionx.echest'
+    - comando: '/spy'
+      descripcion: 'Espiar los comandos del servidor'
+      permiso: 'moderacionx.spy'
+    - comando: '/gm <0|1|2|3> [jugador]'
+      descripcion: 'Cambiar el modo de juego'
+      permiso: 'moderacionx.gm'
+    - comando: '/anuncio <mensaje>'
+      descripcion: 'Anuncio para todo el servidor'
+      permiso: 'moderacionx.anuncio'
+    - comando: '/mx recargar'
+      descripcion: 'Recargar la configuracion'
+      permiso: 'moderacionx.admin'
+
+vanilla:
+  # Oculta los comandos originales de Minecraft para que los de ModeracionX
+  # sean los unicos disponibles (siempre quedan accesibles como /minecraft:ban)
+  desactivar-comandos: true
+  comandos-a-desactivar:
+    - 'minecraft:ban'
+    - 'minecraft:ban-ip'
+    - 'minecraft:banlist'
+    - 'minecraft:pardon'
+    - 'minecraft:pardon-ip'
+    - 'minecraft:kick'

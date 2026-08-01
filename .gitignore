@@ -1,0 +1,15 @@
+target/
+*.class
+*.jar
+
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# servidor de pruebas
+server/
+run/
+logs/

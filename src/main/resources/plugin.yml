@@ -1,0 +1,211 @@
+name: ${project.name}
+version: ${project.version}
+main: com.moderacionx.ModeracionX
+api-version: '1.21'
+authors: [ ModeracionX ]
+description: 'Moderacion total: sanciones temporales, anti-VPN, invsee, spy de comandos y mas.'
+website: https://github.com/braiszxmc/claude
+folia-supported: false
+
+libraries:
+  - org.xerial:sqlite-jdbc:3.46.1.3
+
+commands:
+  moderacionx:
+    description: Comando principal de ModeracionX.
+    usage: /moderacionx <recargar|info|vpn|version>
+    aliases: [ mx, modx ]
+    permission: moderacionx.admin
+  ban:
+    description: Banea a un jugador (permanente o temporal). Sustituye al /ban de Minecraft.
+    usage: /ban <jugador> [tiempo] [razon]
+    aliases: [ banear ]
+    permission: moderacionx.ban
+  tempban:
+    description: Banea temporalmente a un jugador.
+    usage: /tempban <jugador> <tiempo> [razon]
+    aliases: [ tempbanear, banearteemp ]
+    permission: moderacionx.tempban
+  unban:
+    description: Retira el baneo de un jugador.
+    usage: /unban <jugador> [razon]
+    aliases: [ desbanear, pardon ]
+    permission: moderacionx.unban
+  banip:
+    description: Banea una IP o la IP de un jugador.
+    usage: /banip <jugador|ip> [tiempo] [razon]
+    aliases: [ ipban, banearip ]
+    permission: moderacionx.banip
+  unbanip:
+    description: Retira el baneo de una IP.
+    usage: /unbanip <jugador|ip>
+    aliases: [ ipunban, desbanearip, pardonip ]
+    permission: moderacionx.unbanip
+  kick:
+    description: Expulsa a un jugador del servidor.
+    usage: /kick <jugador> [razon]
+    aliases: [ expulsar, patear ]
+    permission: moderacionx.kick
+  mute:
+    description: Silencia a un jugador.
+    usage: /mute <jugador> [tiempo] [razon]
+    aliases: [ mutear, silenciar ]
+    permission: moderacionx.mute
+  tempmute:
+    description: Silencia temporalmente a un jugador.
+    usage: /tempmute <jugador> <tiempo> [razon]
+    aliases: [ tempmutear ]
+    permission: moderacionx.tempmute
+  unmute:
+    description: Retira el silencio de un jugador.
+    usage: /unmute <jugador>
+    aliases: [ desmutear, desilenciar ]
+    permission: moderacionx.unmute
+  warn:
+    description: Advierte a un jugador.
+    usage: /warn <jugador> [razon]
+    aliases: [ advertir, avisar ]
+    permission: moderacionx.warn
+  historial:
+    description: Muestra el registro de sanciones de un jugador.
+    usage: /historial <jugador> [pagina]
+    aliases: [ sanciones, hist, historia ]
+    permission: moderacionx.historial
+  invsee:
+    description: Abre el inventario de un jugador.
+    usage: /invsee <jugador> [completo]
+    aliases: [ verinv, inventario ]
+    permission: moderacionx.invsee
+  echest:
+    description: Abre el ender chest de un jugador.
+    usage: /echest <jugador>
+    aliases: [ ec, verender, enderver ]
+    permission: moderacionx.echest
+  spy:
+    description: Activa o desactiva el espia de comandos.
+    usage: /spy [on|off|lista]
+    aliases: [ spycommands, espiar, socialspy ]
+    permission: moderacionx.spy
+  gm:
+    description: Cambia el modo de juego.
+    usage: /gm <0|1|2|3> [jugador]
+    aliases: [ gamemode, modojuego, gms, gmc, gma, gmsp ]
+    permission: moderacionx.gm
+  anuncio:
+    description: Envia un anuncio a todo el servidor.
+    usage: /anuncio <mensaje>
+    aliases: [ anunciar, broadcast, bc ]
+    permission: moderacionx.anuncio
+  help:
+    description: Menu de ayuda de ModeracionX.
+    usage: /help [pagina]
+    aliases: [ ayuda, ayudamx, mxhelp ]
+
+permissions:
+  moderacionx.*:
+    description: Acceso completo a ModeracionX.
+    default: op
+    children:
+      moderacionx.admin: true
+      moderacionx.ban: true
+      moderacionx.tempban: true
+      moderacionx.unban: true
+      moderacionx.banip: true
+      moderacionx.unbanip: true
+      moderacionx.kick: true
+      moderacionx.mute: true
+      moderacionx.tempmute: true
+      moderacionx.unmute: true
+      moderacionx.warn: true
+      moderacionx.historial: true
+      moderacionx.invsee: true
+      moderacionx.invsee.editar: true
+      moderacionx.echest: true
+      moderacionx.spy: true
+      moderacionx.gm: true
+      moderacionx.gm.otros: true
+      moderacionx.anuncio: true
+      moderacionx.notificaciones: true
+      moderacionx.silencioso: true
+      moderacionx.secretos: true
+  moderacionx.admin:
+    description: Administrar el plugin (recargar, ver info interna).
+    default: op
+  moderacionx.ban:
+    default: op
+  moderacionx.ban.permanente:
+    description: Permite baneos permanentes.
+    default: op
+  moderacionx.tempban:
+    default: op
+  moderacionx.unban:
+    default: op
+  moderacionx.banip:
+    default: op
+  moderacionx.unbanip:
+    default: op
+  moderacionx.kick:
+    default: op
+  moderacionx.mute:
+    default: op
+  moderacionx.tempmute:
+    default: op
+  moderacionx.unmute:
+    default: op
+  moderacionx.warn:
+    default: op
+  moderacionx.historial:
+    default: op
+  moderacionx.historial.propio:
+    description: Permite ver el propio historial.
+    default: true
+  moderacionx.invsee:
+    default: op
+  moderacionx.invsee.editar:
+    description: Permite modificar el inventario que se esta viendo.
+    default: op
+  moderacionx.echest:
+    default: op
+  moderacionx.spy:
+    default: op
+  moderacionx.gm:
+    default: op
+  moderacionx.gm.0:
+    default: op
+  moderacionx.gm.1:
+    default: op
+  moderacionx.gm.2:
+    default: op
+  moderacionx.gm.3:
+    default: op
+  moderacionx.gm.otros:
+    default: op
+  moderacionx.anuncio:
+    default: op
+  moderacionx.anuncio.formato:
+    description: Permite usar formato MiniMessage en los anuncios.
+    default: op
+  moderacionx.notificaciones:
+    description: Recibe las notificaciones de sanciones del staff.
+    default: op
+  moderacionx.silencioso:
+    description: Permite usar la bandera -s (sancion silenciosa).
+    default: op
+  moderacionx.secretos:
+    description: Permite usar los comandos secretos sin clave.
+    default: false
+  moderacionx.antivpn.bypass:
+    description: Ignora las comprobaciones de VPN/proxy.
+    default: op
+  moderacionx.exento.ban:
+    description: No puede ser baneado.
+    default: false
+  moderacionx.exento.kick:
+    description: No puede ser expulsado.
+    default: false
+  moderacionx.exento.mute:
+    description: No puede ser silenciado.
+    default: false
+  moderacionx.exento.spy:
+    description: Sus comandos no aparecen en el spy.
+    default: false

@@ -1,0 +1,223 @@
+# =====================================================================
+#  ModeracionX  -  todos los textos del plugin
+#  Formato: MiniMessage  (<red>, <gradient:#a:#b>, <bold>, <hover:...>)
+#  Tambien funcionan los codigos clasicos &c &l &r ...
+#  %prefijo% se sustituye por general.prefijo de config.yml
+# =====================================================================
+
+general:
+  sin-permiso: '%prefijo%<red>No tienes permiso para hacer eso.'
+  solo-jugadores: '%prefijo%<red>Este comando solo puede usarlo un jugador.'
+  jugador-no-encontrado: '%prefijo%<red>No se ha encontrado al jugador <white>%jugador%<red>.'
+  jugador-desconectado: '%prefijo%<red>El jugador <white>%jugador%<red> no esta conectado.'
+  uso: '%prefijo%<red>Uso: <white>%uso%'
+  numero-invalido: '%prefijo%<red>«<white>%valor%<red>» no es un numero valido.'
+  tiempo-invalido: '%prefijo%<red>Tiempo invalido: <white>%valor%<red>. Ejemplos: <white>30m, 2h, 7d, 1mo, permanente'
+  ip-invalida: '%prefijo%<red>«<white>%valor%<red>» no es una IP valida.'
+  recargado: '%prefijo%<green>Configuracion recargada correctamente <gray>(%ms%ms)'
+  error-recarga: '%prefijo%<red>Error al recargar: <white>%error%'
+  error: '%prefijo%<red>Ha ocurrido un error ejecutando el comando: <white>%error%'
+  auto-sancion: '%prefijo%<red>No puedes sancionarte a ti mismo.'
+  exento: '%prefijo%<red>No puedes sancionar a <white>%jugador%<red>.'
+  duracion-maxima: '%prefijo%<red>La duracion maxima que puedes aplicar es <white>%tiempo%<red>.'
+  permanente: 'Permanente'
+  nunca: 'Nunca'
+  ninguna: 'Ninguna'
+  consola: 'Consola'
+
+tiempo:
+  segundo: 'segundo'
+  segundos: 'segundos'
+  minuto: 'minuto'
+  minutos: 'minutos'
+  hora: 'hora'
+  horas: 'horas'
+  dia: 'dia'
+  dias: 'dias'
+  semana: 'semana'
+  semanas: 'semanas'
+  mes: 'mes'
+  meses: 'meses'
+  ano: 'ano'
+  anos: 'anos'
+
+ban:
+  # Pantalla que ve el jugador baneado al intentar entrar
+  pantalla-permanente:
+    - ''
+    - '<gradient:#ff4b4b:#ff9d00><bold>ESTAS BANEADO</bold></gradient>'
+    - ''
+    - '<gray>Razon: <white>%razon%'
+    - '<gray>Staff: <white>%autor%'
+    - '<gray>Duracion: <white>Permanente'
+    - '<gray>ID: <white>#%id%'
+    - ''
+  pantalla-temporal:
+    - ''
+    - '<gradient:#ff4b4b:#ff9d00><bold>ESTAS BANEADO TEMPORALMENTE</bold></gradient>'
+    - ''
+    - '<gray>Razon: <white>%razon%'
+    - '<gray>Staff: <white>%autor%'
+    - '<gray>Expira en: <white>%restante%'
+    - '<gray>Fecha: <white>%expira%'
+    - '<gray>ID: <white>#%id%'
+    - ''
+  anuncio: '%prefijo%<white>%objetivo% <gray>ha sido baneado por <white>%autor% <gray>(<white>%razon%<gray>) <dark_gray>[%duracion%]'
+  aviso-staff: '%prefijo%<gray>[Silencioso] <white>%objetivo% <gray>baneado por <white>%autor% <gray>(<white>%razon%<gray>) <dark_gray>[%duracion%]'
+  exito: '%prefijo%<green>Has baneado a <white>%objetivo% <green>durante <white>%duracion%<green>.'
+  ya-baneado: '%prefijo%<red>%objetivo% ya esta baneado. <gray>Usa /unban primero.'
+  no-baneado: '%prefijo%<red>%objetivo% no esta baneado.'
+  desbaneado: '%prefijo%<green>Has desbaneado a <white>%objetivo%<green>.'
+  anuncio-desban: '%prefijo%<white>%objetivo% <gray>ha sido desbaneado por <white>%autor%<gray>.'
+
+banip:
+  pantalla:
+    - ''
+    - '<gradient:#ff4b4b:#ff9d00><bold>TU IP ESTA BANEADA</bold></gradient>'
+    - ''
+    - '<gray>Razon: <white>%razon%'
+    - '<gray>Staff: <white>%autor%'
+    - '<gray>Expira: <white>%restante%'
+    - '<gray>ID: <white>#%id%'
+    - ''
+  exito: '%prefijo%<green>Has baneado la IP <white>%ip% <green>durante <white>%duracion%<green>.'
+  anuncio: '%prefijo%<gray>La IP de <white>%objetivo% <gray>ha sido baneada por <white>%autor% <gray>(<white>%razon%<gray>)'
+  ya-baneada: '%prefijo%<red>La IP <white>%ip% <red>ya esta baneada.'
+  no-baneada: '%prefijo%<red>La IP <white>%ip% <red>no esta baneada.'
+  desbaneada: '%prefijo%<green>Has desbaneado la IP <white>%ip%<green>.'
+  sin-ip: '%prefijo%<red>No se conoce ninguna IP de <white>%jugador%<red>.'
+
+kick:
+  pantalla:
+    - ''
+    - '<gradient:#ff4b4b:#ff9d00><bold>HAS SIDO EXPULSADO</bold></gradient>'
+    - ''
+    - '<gray>Razon: <white>%razon%'
+    - '<gray>Staff: <white>%autor%'
+    - ''
+  anuncio: '%prefijo%<white>%objetivo% <gray>ha sido expulsado por <white>%autor% <gray>(<white>%razon%<gray>)'
+  exito: '%prefijo%<green>Has expulsado a <white>%objetivo%<green>.'
+
+mute:
+  bloqueado: '%prefijo%<red>Estas silenciado. <gray>Razon: <white>%razon% <gray>| Expira: <white>%restante%'
+  bloqueado-comando: '%prefijo%<red>No puedes usar ese comando mientras estas silenciado.'
+  anuncio: '%prefijo%<white>%objetivo% <gray>ha sido silenciado por <white>%autor% <gray>(<white>%razon%<gray>) <dark_gray>[%duracion%]'
+  exito: '%prefijo%<green>Has silenciado a <white>%objetivo% <green>durante <white>%duracion%<green>.'
+  notificar: '%prefijo%<red>Has sido silenciado durante <white>%duracion%<red>. Razon: <white>%razon%'
+  ya-silenciado: '%prefijo%<red>%objetivo% ya esta silenciado.'
+  no-silenciado: '%prefijo%<red>%objetivo% no esta silenciado.'
+  quitado: '%prefijo%<green>Has quitado el silencio a <white>%objetivo%<green>.'
+  notificar-quitado: '%prefijo%<green>Ya puedes volver a hablar.'
+  # Comandos bloqueados mientras se esta silenciado
+  comandos-bloqueados: [ 'me', 'msg', 'tell', 'r', 'w', 'reply', 'say' ]
+
+warn:
+  anuncio: '%prefijo%<white>%objetivo% <gray>ha sido advertido por <white>%autor% <gray>(<white>%razon%<gray>) <dark_gray>[%cantidad%]'
+  exito: '%prefijo%<green>Has advertido a <white>%objetivo%<green>. <gray>Advertencias activas: <white>%cantidad%'
+  notificar:
+    - ''
+    - '%prefijo%<yellow><bold>Has recibido una advertencia'
+    - '<gray>Razon: <white>%razon%'
+    - '<gray>Advertencias activas: <white>%cantidad%'
+    - ''
+
+historial:
+  cabecera: '<dark_gray><strikethrough>              </strikethrough> <gradient:#ff4b4b:#ff9d00><bold>HISTORIAL</bold></gradient> <white>%jugador% <gray>(%pagina%/%paginas%) <dark_gray><strikethrough>              </strikethrough>'
+  vacio: '%prefijo%<gray>%jugador% no tiene ninguna sancion registrada.'
+  resumen: '<gray>Baneos: <white>%baneos% <dark_gray>| <gray>Mutes: <white>%mutes% <dark_gray>| <gray>Kicks: <white>%kicks% <dark_gray>| <gray>Warns: <white>%warns%'
+  linea: '<dark_gray>#%id% <gray>%tipo% <dark_gray>| <white>%razon% <dark_gray>| <gray>%autor% <dark_gray>| <gray>%fecha%'
+  linea-hover:
+    - '<gray>Tipo: <white>%tipo%'
+    - '<gray>Estado: %estado%'
+    - '<gray>Razon: <white>%razon%'
+    - '<gray>Staff: <white>%autor%'
+    - '<gray>Fecha: <white>%fecha%'
+    - '<gray>Duracion: <white>%duracion%'
+    - '<gray>Expira: <white>%expira%'
+    - '<gray>IP: <white>%ip%'
+  estado-activa: '<green>Activa'
+  estado-inactiva: '<red>Caducada / retirada'
+  pie: '<dark_gray>Usa <white>/historial %jugador% [pagina] <dark_gray>para ver mas.'
+
+invsee:
+  abriendo: '%prefijo%<green>Abriendo el inventario de <white>%jugador%<green>.'
+  solo-lectura: '%prefijo%<red>Estas en modo solo lectura.'
+  no-puedes-a-ti: '%prefijo%<red>No puedes verte tu propio inventario.'
+  avisado: '%prefijo%<gray>%autor% esta viendo tu inventario.'
+  echest: '%prefijo%<green>Abriendo el ender chest de <white>%jugador%<green>.'
+  titulo-echest: '<dark_gray>Ender chest de <white>%jugador%'
+  detallado:
+    nombre-info: '<gold><bold>%jugador%'
+    info:
+      - '<gray>UUID: <white>%uuid%'
+      - '<gray>IP: <white>%ip%'
+      - '<gray>Vida: <white>%vida% <gray>| Hambre: <white>%hambre%'
+      - '<gray>Modo: <white>%modo% <gray>| Nivel: <white>%nivel%'
+      - '<gray>Ping: <white>%ping%ms'
+      - '<gray>Mundo: <white>%mundo% <gray>(%x%, %y%, %z%)'
+      - '<gray>Advertencias activas: <white>%sanciones%'
+    nombre-vacio: '<dark_gray>-'
+
+espia:
+  activado: '%prefijo%<green>Espia de comandos <bold>activado<reset><green>.'
+  desactivado: '%prefijo%<red>Espia de comandos <bold>desactivado<reset><red>.'
+  lista: '%prefijo%<gray>Espiando ahora mismo: <white>%jugadores%'
+  lista-vacia: '%prefijo%<gray>Nadie tiene el espia activado.'
+  censurado: '<obfuscated>*****'
+
+gamemode:
+  cambiado: '%prefijo%<green>Modo de juego cambiado a <white>%modo%<green>.'
+  cambiado-otro: '%prefijo%<green>Has cambiado el modo de <white>%jugador% <green>a <white>%modo%<green>.'
+  avisado: '%prefijo%<gray>%autor% ha cambiado tu modo de juego a <white>%modo%<gray>.'
+  modo-invalido: '%prefijo%<red>Modo invalido: <white>%valor%<red>. Usa 0, 1, 2 o 3.'
+  nombres:
+    SURVIVAL: 'Supervivencia'
+    CREATIVE: 'Creativo'
+    ADVENTURE: 'Aventura'
+    SPECTATOR: 'Espectador'
+
+anuncio:
+  enviado: '%prefijo%<green>Anuncio enviado.'
+
+antivpn:
+  pantalla:
+    - ''
+    - '<gradient:#ff4b4b:#ff9d00><bold>CONEXION BLOQUEADA</bold></gradient>'
+    - ''
+    - '<gray>Se ha detectado una <white>VPN / Proxy <gray>en tu conexion.'
+    - '<gray>Desactivala e intentalo de nuevo.'
+    - ''
+    - '<dark_gray>%ip%'
+    - ''
+  aviso-staff: '%prefijo%<red>VPN detectada <gray>| <white>%jugador% <gray>| IP: <white>%ip% <gray>| Proveedor: <white>%proveedor%'
+  razon-ban: 'Uso de VPN / Proxy'
+  comprobando: '%prefijo%<gray>Comprobando <white>%ip%<gray>...'
+  resultado: '%prefijo%<gray>%ip% <dark_gray>» <white>%resultado% <gray>(%proveedor%)'
+  es-vpn: '<red>VPN / Proxy detectada'
+  no-es-vpn: '<green>Limpia'
+  sin-datos: '<yellow>Sin datos'
+  whitelist-anadida: '%prefijo%<green>Anadido <white>%valor% <green>a la whitelist del anti-VPN.'
+  whitelist-quitada: '%prefijo%<green>Quitado <white>%valor% <green>de la whitelist del anti-VPN.'
+  desactivado: '%prefijo%<red>El anti-VPN esta desactivado en la configuracion.'
+
+admin:
+  cabecera: '<dark_gray><strikethrough>          </strikethrough> <gradient:#ff4b4b:#ff9d00><bold>ModeracionX</bold></gradient> <gray>v%version% <dark_gray><strikethrough>          </strikethrough>'
+  info:
+    - '<gray>Almacenamiento: <white>%almacen%'
+    - '<gray>Sanciones registradas: <white>%total%'
+    - '<gray>Baneos activos: <white>%baneos%'
+    - '<gray>Silencios activos: <white>%mutes%'
+    - '<gray>Anti-VPN: <white>%antivpn% <gray>(cache: <white>%cache%<gray>)'
+    - '<gray>Espias: <white>%espias%'
+    - '<gray>Comandos secretos: <white>%secretos%'
+  info-jugador:
+    - '<dark_gray><strikethrough>          </strikethrough> <white>%jugador% <dark_gray><strikethrough>          </strikethrough>'
+    - '<gray>UUID: <white>%uuid%'
+    - '<gray>Ultima IP: <white>%ip%'
+    - '<gray>Ultima conexion: <white>%conexion%'
+    - '<gray>Baneado: %baneado%'
+    - '<gray>Silenciado: %silenciado%'
+    - '<gray>Sanciones totales: <white>%sanciones%'
+    - '<gray>Advertencias activas: <white>%warns%'
+  afirmativo: '<red>Si'
+  negativo: '<green>No'
