@@ -1,0 +1,137 @@
+# =====================================================================
+#  BlockBallRanked - partidas rankeds con Elo sobre el plugin BlockBall
+# =====================================================================
+#
+#  IMPORTANTE: las arenas que pongas en "modes.<modo>.arenas" tienen que
+#  existir ya en BlockBall, ser de tipo MINIGAME y tener el minimo y el
+#  maximo de jugadores por equipo igual al teamSize del modo.
+#
+#  Ejemplo para un 2v2:
+#    /blockball create ranked_2v2_1 &7Ranked 2v2
+#    -> en el GUI: Game Type = MINIGAME
+#    -> Team Red:  min 2 / max 2      Team Blue: min 2 / max 2
+#
+
+database:
+  # sqlite (recomendado, no necesita nada) o mysql
+  type: sqlite
+  # Solo para sqlite: fichero dentro de la carpeta del plugin.
+  file: ranked.db
+  # Solo para mysql:
+  host: localhost
+  port: 3306
+  database: minecraft
+  username: root
+  password: ""
+  # Prefijo de las tablas.
+  table-prefix: bbranked_
+  # Parametros extra de la URL JDBC de MySQL.
+  mysql-properties: "useSSL=false&allowPublicKeyRetrieval=true&characterEncoding=utf8"
+
+elo:
+  # Elo con el que empieza un jugador nuevo.
+  starting: 1000
+  # Elo minimo posible (nunca se baja de aqui).
+  minimum: 0
+  # Numero de partidas de colocacion. Durante estas se usa placement-k.
+  placement-matches: 10
+  # Factor K (cuanto se mueve el Elo por partida).
+  placement-k: 60
+  base-k: 32
+  # Por encima de este Elo se usa high-k, para que la cima sea mas estable.
+  high-elo-threshold: 1800
+  high-k: 16
+  # Ganancia/perdida minima garantizada por partida (0 = desactivado).
+  min-gain: 1
+  min-loss: 1
+
+  goal-difference:
+    # Si se activa, ganar 5-0 da mas Elo que ganar 1-0.
+    enabled: true
+    # delta = delta * (1 + factor * ln(1 + diferencia_de_goles))
+    factor: 0.18
+    # Tope del multiplicador.
+    max-multiplier: 1.6
+
+  leaver:
+    # Si un jugador abandona la partida, su equipo pierde automaticamente.
+    forfeit-on-leave: true
+    # Elo extra que pierde el que abandona (ademas de la derrota normal).
+    extra-penalty: 25
+    # Los companeros del que abandona no pierden Elo.
+    protect-teammates: true
+    # Segundos que un abandono bloquea al jugador de volver a la cola.
+    queue-ban-seconds: 300
+
+queue:
+  # Cada cuantos segundos se intenta emparejar.
+  check-interval-seconds: 3
+  # Diferencia de Elo aceptada al entrar en cola.
+  initial-range: 100
+  # Cuanto se amplia esa diferencia por cada segundo esperando.
+  range-expansion-per-second: 10
+  # Diferencia maxima de Elo aceptada.
+  max-range: 1000
+  # Segundos maximos que una partida puede tardar en arrancar de verdad
+  # antes de cancelarse y devolver a los jugadores a la cola.
+  start-timeout-seconds: 60
+  # Si es true, nadie puede entrar a una arena ranked con /blockball join.
+  block-manual-join: true
+
+# Modos de juego. Puedes crear los que quieras.
+modes:
+  1v1:
+    display-name: "1v1"
+    team-size: 1
+    arenas:
+      - ranked_1v1_1
+      - ranked_1v1_2
+  2v2:
+    display-name: "2v2"
+    team-size: 2
+    arenas:
+      - ranked_2v2_1
+  3v3:
+    display-name: "3v3"
+    team-size: 3
+    arenas:
+      - ranked_3v3_1
+
+# Divisiones. Se ordenan solas por min-elo. La primera cuyo min-elo sea
+# menor o igual al Elo del jugador (empezando por la mas alta) es la suya.
+ranks:
+  - id: hierro
+    display-name: "<gray>Hierro</gray>"
+    min-elo: 0
+  - id: bronce
+    display-name: "<color:#cd7f32>Bronce</color>"
+    min-elo: 900
+  - id: plata
+    display-name: "<white>Plata</white>"
+    min-elo: 1100
+  - id: oro
+    display-name: "<gold>Oro</gold>"
+    min-elo: 1300
+  - id: platino
+    display-name: "<aqua>Platino</aqua>"
+    min-elo: 1500
+  - id: diamante
+    display-name: "<blue>Diamante</blue>"
+    min-elo: 1700
+  - id: maestro
+    display-name: "<light_purple>Maestro</light_purple>"
+    min-elo: 1900
+  - id: gran-maestro
+    display-name: "<red>Gran Maestro</red>"
+    min-elo: 2100
+
+leaderboard:
+  # Entradas por pagina en /ranked top.
+  page-size: 10
+  # Partidas minimas para aparecer en el top.
+  min-matches: 5
+  # Cada cuantos segundos se refresca la cache del top.
+  refresh-seconds: 60
+
+# Anuncia el resultado de las partidas ranked a todo el servidor.
+broadcast-results: false

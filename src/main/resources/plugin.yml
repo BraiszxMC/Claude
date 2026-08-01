@@ -1,0 +1,32 @@
+name: BlockBallRanked
+version: '${version}'
+main: com.braiszx.bbranked.BlockBallRankedPlugin
+api-version: '1.21'
+author: BraiszxMC
+description: Sistema de partidas rankeds con Elo para el plugin BlockBall.
+depend: [ BlockBall ]
+softdepend: [ PlaceholderAPI ]
+
+libraries:
+  - org.xerial:sqlite-jdbc:3.46.1.3
+  - com.mysql:mysql-connector-j:9.1.0
+
+commands:
+  ranked:
+    description: Comando principal del sistema ranked.
+    usage: /ranked help
+    aliases: [ rk, elo, bbranked ]
+
+permissions:
+  bbranked.play:
+    description: Permite entrar a la cola ranked.
+    default: true
+  bbranked.stats:
+    description: Permite ver estadisticas y el top.
+    default: true
+  bbranked.stats.others:
+    description: Permite ver las estadisticas de otros jugadores.
+    default: true
+  bbranked.admin:
+    description: Acceso a los comandos de administracion.
+    default: op

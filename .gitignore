@@ -1,0 +1,10 @@
+build/
+.gradle/
+*.class
+
+# El jar de BlockBall lo pone cada uno (no se redistribuye).
+libs/*.jar
+
+.idea/
+*.iml
+.vscode/

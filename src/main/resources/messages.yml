@@ -1,0 +1,83 @@
+# Formato MiniMessage: https://docs.advntr.dev/minimessage/format.html
+# Placeholders disponibles por mensaje entre {llaves}.
+
+prefix: "<gray>[</gray><gradient:#00d4ff:#0066ff><bold>RANKED</bold></gradient><gray>]</gray> "
+
+no-permission: "<red>No tienes permiso para hacer eso."
+players-only: "<red>Este comando solo lo pueden usar jugadores."
+player-not-found: "<red>No se ha encontrado al jugador <white>{player}</white>."
+invalid-number: "<red>'<white>{input}</white>' no es un numero valido."
+unknown-mode: "<red>El modo <white>{mode}</white> no existe. Modos: <white>{modes}</white>."
+reloaded: "<green>Configuracion recargada."
+
+queue:
+  joined: "<green>Has entrado a la cola de <white>{mode}</white>. <gray>({current}/{needed})"
+  left: "<yellow>Has salido de la cola."
+  not-in-queue: "<red>No estas en ninguna cola."
+  already-in-queue: "<red>Ya estas en la cola de <white>{mode}</white>."
+  already-in-match: "<red>Ya estas en una partida ranked."
+  no-arena: "<red>No hay ninguna arena libre para <white>{mode}</white> ahora mismo."
+  banned: "<red>Estas penalizado por abandonar. Espera <white>{seconds}s</white>."
+  status-header: "<gray>--- <white>Colas activas</white> ---"
+  status-line: "<gray> - <white>{mode}</white><gray>: <yellow>{count}</yellow> en cola"
+  status-empty: "<gray>No hay nadie en cola."
+
+match:
+  found: "<green>Partida encontrada en <white>{arena}</white>. <gray>Preparando..."
+  starting: "<green>Empieza la partida <white>{mode}</white>!"
+  cancelled: "<red>La partida se ha cancelado. Vuelves a la cola."
+  aborted: "<red>La partida ranked se ha cancelado y no cuenta para el Elo."
+  blocked-join: "<red>Esta arena es ranked. Usa <white>/ranked join</white>."
+  leaver-forfeit: "<red>{player} ha abandonado. Su equipo pierde la partida."
+
+result:
+  header: "<gray>-------- <white>Resultado ranked</white> <gray>--------"
+  score: "<gray>Marcador: <red>{red}</red> <gray>-</gray> <blue>{blue}</blue>"
+  win: "<green><bold>VICTORIA</bold>"
+  loss: "<red><bold>DERROTA</bold>"
+  draw: "<yellow><bold>EMPATE</bold>"
+  elo-gain: "<gray>Elo: <white>{old}</white> <gray>-> <white>{new}</white> <green>(+{delta})"
+  elo-loss: "<gray>Elo: <white>{old}</white> <gray>-> <white>{new}</white> <red>({delta})"
+  elo-same: "<gray>Elo: <white>{new}</white> <gray>(sin cambios)"
+  rank-up: "<green>Has subido a <reset>{rank}</reset><green>!"
+  rank-down: "<red>Has bajado a <reset>{rank}</reset><red>."
+  footer: "<gray>--------------------------------"
+  broadcast: "<gray>[Ranked] <white>{winners}</white> <gray>han ganado a <white>{losers}</white> <gray>({red}-{blue}) en <white>{mode}</white>."
+
+stats:
+  header: "<gray>--- Estadisticas de <white>{player}</white> <gray>---"
+  rank: "<gray>Division: <reset>{rank}"
+  elo: "<gray>Elo: <white>{elo}</white> <gray>(pico: <white>{peak}</white>)"
+  record: "<gray>V/D/E: <green>{wins}</green><gray>/<red>{losses}</red><gray>/<yellow>{draws}</yellow> <gray>(<white>{winrate}%</white>)"
+  matches: "<gray>Partidas: <white>{matches}</white> <gray>| Goles: <white>{goals}</white>"
+  streak: "<gray>Racha: <white>{streak}</white> <gray>(mejor: <white>{best}</white>)"
+  leaves: "<gray>Abandonos: <white>{leaves}</white>"
+  placements: "<yellow>Colocacion: faltan <white>{remaining}</white> partidas."
+  no-data: "<red>Ese jugador todavia no ha jugado ninguna ranked."
+
+top:
+  header: "<gray>--- <white>Top Elo</white> <gray>(pagina {page}/{pages}) ---"
+  line: "<gray>{position}. <white>{player}</white> <gray>- <white>{elo}</white> <gray>| <reset>{rank}"
+  empty: "<gray>Todavia no hay nadie en el top."
+
+admin:
+  elo-set: "<green>Elo de <white>{player}</white> puesto a <white>{elo}</white>."
+  reset: "<green>Estadisticas de <white>{player}</white> reiniciadas."
+  match-ended: "<green>Partida forzada a terminar."
+  no-match: "<red>Ese jugador no esta en una partida ranked."
+  matches-header: "<gray>--- <white>Partidas ranked activas</white> <gray>---"
+  matches-line: "<gray> - <white>{arena}</white> <gray>({mode}) <red>{red}</red><gray>-<blue>{blue}</blue> <gray>| {seconds}s"
+  matches-empty: "<gray>No hay partidas ranked activas."
+
+help:
+  - "<gray>--- <white>BlockBallRanked</white> <gray>---"
+  - "<white>/ranked join <mode></white> <gray>- entrar a la cola"
+  - "<white>/ranked leave</white> <gray>- salir de la cola"
+  - "<white>/ranked stats [jugador]</white> <gray>- ver estadisticas"
+  - "<white>/ranked top [pagina]</white> <gray>- ver el ranking"
+  - "<white>/ranked queues</white> <gray>- ver las colas activas"
+  - "<white>/ranked reload</white> <gray>- recargar config"
+  - "<white>/ranked setelo <jugador> <elo></white> <gray>- cambiar Elo"
+  - "<white>/ranked reset <jugador></white> <gray>- reiniciar estadisticas"
+  - "<white>/ranked matches</white> <gray>- ver partidas activas"
+  - "<white>/ranked forceend <jugador></white> <gray>- cancelar su partida"
