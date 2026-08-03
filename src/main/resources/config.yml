@@ -67,6 +67,22 @@ elo:
     # cuando hay empate no se da MVP a nadie.
     share-on-tie: true
 
+  # Anti-boosting: ganar muchas veces seguidas al MISMO rival da cada vez
+  # menos Elo. El contador se reinicia cuando pasan las horas indicadas sin
+  # volver a enfrentaros. Solo afecta a lo que GANAS, nunca a lo que pierdes.
+  repeat-opponent:
+    enabled: true
+    # Partidas contra el mismo rival que todavia dan el Elo completo.
+    free-matches: 2
+    # Cuanto se reduce la ganancia por cada partida extra (0.25 = un 25%).
+    reduction-per-match: 0.25
+    # Suelo: por muchas veces que juguen, nunca baja de esto.
+    min-multiplier: 0.15
+    # Horas sin enfrentarse para que el contador vuelva a cero.
+    reset-hours: 24
+    # Avisa por Discord/consola si detecta un caso muy repetido.
+    alert-after: 6
+
   goal-difference:
     # Si se activa, ganar 5-0 da mas Elo que ganar 1-0.
     enabled: true
@@ -206,6 +222,91 @@ sounds:
   error: "block.note_block.bass 1.0 0.5"
   party-invite: "entity.experience_orb.pickup 1.0 1.8"
   party-join: "entity.player.levelup 0.6 1.6"
+  ready-check: "block.note_block.pling 1.0 1.8"
+  ready-accept: "entity.experience_orb.pickup 1.0 1.2"
+
+# Confirmacion antes de empezar. Cuando se forma la partida, todos tienen que
+# pulsar ACEPTAR en el chat. Quien no acepte se lleva penalizacion y los demas
+# vuelven a la cola sin perder su sitio. Evita las partidas arruinadas por AFK.
+ready-check:
+  enabled: true
+  # Segundos para aceptar.
+  seconds: 20
+  # Segundos de penalizacion de cola para quien no acepte.
+  penalty-seconds: 120
+
+# Decaimiento por inactividad: si no juegas, bajas poco a poco. Evita que
+# alguien llegue arriba y se retire para quedarse ahi toda la temporada.
+decay:
+  enabled: false
+  # Dias sin jugar antes de que empiece a bajar.
+  inactive-days: 14
+  # Elo que se pierde por cada dia de inactividad a partir de ahi.
+  elo-per-day: 10
+  # Nunca baja de aqui por inactividad.
+  floor: 1200
+  # Solo afecta a quien ya haya salido de colocacion.
+  require-placements: true
+  # Cada cuantos minutos se revisa.
+  check-interval-minutes: 60
+
+# Temporadas. Al cerrar una se guarda el ranking final, se reparten premios y
+# el Elo se acerca al centro (no se resetea del todo).
+season:
+  enabled: true
+  # nuevo_elo = target + (elo_actual - target) * factor
+  #   factor 0.5 -> alguien con 2000 empieza la siguiente en 1500
+  #   factor 1.0 -> no se resetea nada
+  #   factor 0.0 -> todos vuelven al target
+  soft-reset:
+    target: 1000
+    factor: 0.5
+  # Comandos al cerrar la temporada. {player} es el nombre del jugador.
+  rewards:
+    # Por puesto final en el ranking.
+    top:
+      1:
+        - "give {player} diamond_block 10"
+        - "broadcast &6{player} &fha ganado la temporada &6{season}&f!"
+      2:
+        - "give {player} diamond_block 5"
+      3:
+        - "give {player} diamond_block 3"
+    # Por division final. Usa los mismos ids que en 'ranks'.
+    ranks:
+      gran-maestro:
+        - "give {player} netherite_ingot 2"
+      maestro:
+        - "give {player} diamond 16"
+
+# Menu grafico con /ranked menu.
+menu:
+  enabled: true
+  title: "<gradient:#ffe259:#ffa751>Ranked</gradient>"
+  # Icono de cada modo. Usa nombres de material de Minecraft.
+  mode-icons:
+    1v1: "IRON_BOOTS"
+    2v2: "GOLDEN_BOOTS"
+    3v3: "DIAMOND_BOOTS"
+  default-mode-icon: "LEATHER_BOOTS"
+
+# Avisos a un canal de Discord.
+#
+# Como conseguir la URL: Ajustes del servidor -> Integraciones -> Webhooks ->
+# Nuevo webhook -> elige canal -> Copiar URL.
+#
+# CUIDADO: esa URL es como una contrasena. Quien la tenga puede publicar en tu
+# canal. No la subas a ningun sitio publico ni la ensenes en capturas.
+discord:
+  enabled: false
+  webhook-url: ""
+  # Nombre con el que aparecen los mensajes.
+  username: "Ranked"
+  # Que se anuncia.
+  send-match-results: true
+  send-rank-changes: true
+  send-season-end: true
+  send-boosting-alerts: true
 
 # Anuncia el resultado de las partidas ranked a todo el servidor.
 broadcast-results: false

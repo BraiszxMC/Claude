@@ -9,6 +9,7 @@ import com.braiszx.bbranked.data.StatsManager;
 import com.braiszx.bbranked.elo.EloChange;
 import com.braiszx.bbranked.elo.EloCalculator;
 import com.braiszx.bbranked.elo.MatchWinner;
+import com.braiszx.bbranked.hook.DiscordWebhook;
 import com.braiszx.bbranked.util.Messages;
 import com.braiszx.bbranked.util.Sounds;
 import com.github.shynixn.blockball.contract.GameService;
@@ -48,6 +49,7 @@ public final class MatchManager {
     private final StatsManager stats;
     private final EloCalculator elo;
     private final Sounds sounds;
+    private final DiscordWebhook discord;
 
     /** Partidas vivas, por id. */
     private final Map<UUID, RankedMatch> matches = new ConcurrentHashMap<>();
@@ -61,13 +63,15 @@ public final class MatchManager {
     private final Set<UUID> authorizedJoins = ConcurrentHashMap.newKeySet();
 
     public MatchManager(BlockBallRankedPlugin plugin, RankedConfig config, Messages messages,
-                        StatsManager stats, EloCalculator elo, Sounds sounds) {
+                        StatsManager stats, EloCalculator elo, Sounds sounds,
+                        DiscordWebhook discord) {
         this.plugin = plugin;
         this.config = config;
         this.messages = messages;
         this.stats = stats;
         this.elo = elo;
         this.sounds = sounds;
+        this.discord = discord;
     }
 
     // ------------------------------------------------------------------
@@ -307,6 +311,13 @@ public final class MatchManager {
                 sounds.play(player, "match-found");
             }
             sendMatchupComparison(match);
+
+            // Los enfrentamientos previos se cargan ahora, con la partida
+            // recien empezada: para cuando haya que liquidarla ya estaran.
+            if (config.repeatOpponentEnabled()) {
+                stats.storage().loadEncounters(match.red(), match.blue(), config.repeatResetMillis())
+                        .thenAccept(match::repeatCounts);
+            }
         });
     }
 
@@ -583,7 +594,7 @@ public final class MatchManager {
         }
 
         List<EloChange> changes = elo.apply(red, blue, match.redScore(), match.blueScore(),
-                winner, new HashSet<>(match.leavers()));
+                winner, new HashSet<>(match.leavers()), match.repeatCounts());
 
         // El MVP se aplica encima del Elo ya calculado, para que el mensaje
         // final muestre el total real.
@@ -614,9 +625,16 @@ public final class MatchManager {
 
         persistHistory(match, winner, changes);
 
+        if (config.repeatOpponentEnabled()) {
+            stats.storage().recordEncounters(match.red(), match.blue(), config.repeatResetMillis());
+            checkBoosting(match);
+        }
+
         if (config.broadcastResults()) {
             broadcastResult(match, winner);
         }
+
+        sendResultToDiscord(match, winner, changes);
 
         // Los jugadores ya pueden volver a la cola aunque la arena tarde un
         // poco en reiniciarse.
@@ -731,6 +749,13 @@ public final class MatchManager {
             messages.sendRaw(player, promoted ? "result.rank-up" : "result.rank-down",
                     Map.of("rank", newRank.displayName()));
             sounds.play(player, promoted ? "rank-up" : "rank-down");
+
+            if (config.discordRankChanges()) {
+                discord.send(promoted ? "Ascenso de division" : "Descenso de division",
+                        "**" + player.getName() + "** " + (promoted ? "sube" : "baja") + " a **"
+                                + stripTags(newRank.displayName()) + "** con " + change.after() + " Elo.",
+                        promoted ? DiscordWebhook.COLOR_GREEN : DiscordWebhook.COLOR_RED);
+            }
         }
 
         messages.sendRaw(player, "result.footer");
@@ -748,6 +773,61 @@ public final class MatchManager {
                 "red", String.valueOf(match.redScore()),
                 "blue", String.valueOf(match.blueScore()),
                 "mode", match.mode().displayName())));
+    }
+
+    /**
+     * Avisa al staff si dos jugadores llevan enfrentandose demasiadas veces
+     * seguidas: puede ser gente pasandose Elo.
+     */
+    private void checkBoosting(RankedMatch match) {
+        int alertAfter = config.repeatAlertAfter();
+        if (alertAfter <= 0 || match.worstRepeatCount() < alertAfter) {
+            return;
+        }
+
+        String involved = names(match.allPlayers());
+        plugin.getLogger().warning("Posible boosting: " + involved + " llevan "
+                + match.worstRepeatCount() + " partidas seguidas entre ellos en "
+                + match.mode().displayName() + ".");
+
+        if (config.discordBoostingAlerts()) {
+            discord.send("Posible boosting",
+                    "**" + involved + "** llevan **" + match.worstRepeatCount()
+                            + "** partidas entre ellos en " + match.mode().displayName() + ".",
+                    DiscordWebhook.COLOR_GOLD);
+        }
+    }
+
+    private void sendResultToDiscord(RankedMatch match, MatchWinner winner, List<EloChange> changes) {
+        if (!config.discordEnabled() || !config.discordMatchResults()) {
+            return;
+        }
+
+        StringBuilder description = new StringBuilder();
+        description.append("**").append(names(match.red())).append("** ")
+                .append(match.redScore()).append(" - ").append(match.blueScore())
+                .append(" **").append(names(match.blue())).append("**\n");
+
+        if (winner == MatchWinner.DRAW) {
+            description.append("Empate\n");
+        } else {
+            description.append("Gana el equipo ")
+                    .append(winner == MatchWinner.RED ? "rojo" : "azul").append("\n");
+        }
+
+        description.append("\n");
+        for (EloChange change : changes) {
+            PlayerStats playerStats = stats.cached(change.uuid());
+            String name = playerStats != null ? playerStats.name() : "?";
+            int delta = change.delta();
+            description.append(name).append(": ")
+                    .append(delta >= 0 ? "+" : "").append(delta)
+                    .append(" (").append(change.after()).append(")\n");
+        }
+
+        discord.send("Partida ranked - " + match.mode().displayName(),
+                description.toString(),
+                winner == MatchWinner.DRAW ? DiscordWebhook.COLOR_BLUE : DiscordWebhook.COLOR_GREEN);
     }
 
     private void persistHistory(RankedMatch match, MatchWinner winner, List<EloChange> changes) {
@@ -824,6 +904,14 @@ public final class MatchManager {
                 player.sendMessage(component);
             }
         }
+    }
+
+    /**
+     * Quita las etiquetas de MiniMessage para mandar el texto a Discord, que
+     * no las entiende.
+     */
+    private static String stripTags(String input) {
+        return input.replaceAll("<[^>]*>", "");
     }
 
     private String names(List<UUID> uuids) {

@@ -115,6 +115,18 @@ public final class StatsManager {
         storage.save(stats);
     }
 
+    /**
+     * Vuelve a leer de la base de datos las estadisticas de todos los
+     * conectados. Se usa tras el reset de temporada, que cambia el Elo por
+     * SQL y deja la cache desfasada.
+     */
+    public void reloadOnlinePlayers() {
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            cache.remove(player.getUniqueId());
+            load(player);
+        }
+    }
+
     public void saveAll() {
         List<PlayerStats> all = new ArrayList<>(cache.values());
         if (!all.isEmpty()) {

@@ -8,6 +8,7 @@ import com.braiszx.bbranked.data.StatsManager;
 import com.braiszx.bbranked.match.MatchManager;
 import com.braiszx.bbranked.party.Party;
 import com.braiszx.bbranked.party.PartyManager;
+import com.braiszx.bbranked.ready.ReadyCheckManager;
 import com.braiszx.bbranked.util.Messages;
 import com.braiszx.bbranked.util.Sounds;
 import net.kyori.adventure.text.Component;
@@ -39,6 +40,7 @@ public final class QueueManager {
     private final BanManager bans;
     private final PartyManager parties;
     private final Sounds sounds;
+    private ReadyCheckManager readyChecks;
 
     /** modo -> tickets en cola, en orden de llegada. */
     private final Map<String, List<QueueTicket>> queues = new ConcurrentHashMap<>();
@@ -169,6 +171,11 @@ public final class QueueManager {
         if (matches.isInMatch(uuid)) {
             messages.send(notify, player == notify ? "queue.already-in-match" : "party.member-in-match",
                     Map.of("player", player.getName()));
+            return false;
+        }
+
+        if (readyChecks != null && readyChecks.isPending(uuid)) {
+            messages.send(notify, "ready.already-accepted");
             return false;
         }
 
@@ -319,6 +326,16 @@ public final class QueueManager {
     public void penalize(UUID uuid) {
         if (config.leaverQueueBanSeconds() > 0) {
             penalties.put(uuid, System.currentTimeMillis() + config.leaverQueueBanSeconds() * 1000L);
+        }
+    }
+
+    /**
+     * Penalizacion por no confirmar una partida. Suele ser mas corta que la de
+     * abandonar una partida ya empezada.
+     */
+    public void penalizeReadyCheck(UUID uuid) {
+        if (config.readyCheckPenaltySeconds() > 0) {
+            penalties.put(uuid, System.currentTimeMillis() + config.readyCheckPenaltySeconds() * 1000L);
         }
     }
 
@@ -477,6 +494,13 @@ public final class QueueManager {
             }
         }
 
+        // Con la confirmacion activada no se entra directo a la arena: primero
+        // todos tienen que pulsar ACEPTAR.
+        if (config.readyCheckEnabled() && readyChecks != null) {
+            readyChecks.begin(mode, selection.tickets(), selection.split().red(), selection.split().blue());
+            return true;
+        }
+
         List<Player> red = toPlayers(selection.split().red());
         List<Player> blue = toPlayers(selection.split().blue());
         if (red == null || blue == null) {
@@ -493,6 +517,21 @@ public final class QueueManager {
             return false;
         }
         return true;
+    }
+
+    /**
+     * Se enlaza despues de construir los dos objetos, porque se necesitan
+     * mutuamente.
+     */
+    public void readyChecks(ReadyCheckManager readyChecks) {
+        this.readyChecks = readyChecks;
+    }
+
+    /**
+     * Devuelve unos tickets a la cola. Lo usa la confirmacion cuando falla.
+     */
+    public void returnToQueue(QueueMode mode, List<QueueTicket> tickets) {
+        requeue(mode, tickets);
     }
 
     private List<Player> toPlayers(List<UUID> uuids) {

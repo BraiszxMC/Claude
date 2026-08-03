@@ -47,6 +47,40 @@ matchup:
 actionbar:
   queue: "<gray>En cola <white>{mode}</white> <dark_gray>| <yellow>{current}<gray>/<yellow>{needed}</yellow> <dark_gray>| <gray>{time}"
   mvp: "<gold><bold>MVP DE LA PARTIDA!</bold></gold> <gray>Llevas <yellow>{mvps}</yellow>"
+  ready: "<yellow>Confirma la partida <dark_gray>| <white>{accepted}<gray>/<white>{total}</white> <dark_gray>| <red>{seconds}s"
+
+# Confirmacion antes de empezar la partida.
+ready:
+  header: "<gray>-------- <white>Partida encontrada</white> <gray>--------"
+  found: "<gray>Modo: <white>{mode}</white>. Tienes <yellow>{seconds}s</yellow> para confirmar."
+  # Texto clicable: al pulsarlo ejecuta /ranked accept.
+  button: "<click:run_command:'/ranked accept'><hover:show_text:'<green>Pulsa para aceptar la partida'><green><bold>   [ ACEPTAR PARTIDA ]   </bold></green></hover></click>"
+  footer: "<gray>--------------------------------"
+  accepted: "<green>Confirmados <white>{accepted}</white>/<white>{total}</white>."
+  already-accepted: "<yellow>Ya habias confirmado, espera a los demas."
+  nothing-pending: "<red>No tienes ninguna partida por confirmar."
+  you-failed: "<red>No has confirmado a tiempo. Te has llevado una penalizacion."
+  cancelled-timeout: "<red>Alguien no ha confirmado. Vuelves a la cola."
+  cancelled-offline: "<red>Alguien se ha desconectado. Vuelves a la cola."
+
+# Historial de partidas.
+history:
+  header: "<gray>--- <white>Historial de {player}</white> <gray>(pagina {page}) ---"
+  win: "<gray>[{date}] <green>VICTORIA</green> <gray>{mode} <white>{red}-{blue}</white> <green>({delta})"
+  loss: "<gray>[{date}] <red>DERROTA</red> <gray>{mode} <white>{red}-{blue}</white> <red>({delta})"
+  draw: "<gray>[{date}] <yellow>EMPATE</yellow> <gray>{mode} <white>{red}-{blue}</white> <gray>({delta})"
+  empty: "<gray>Sin partidas todavia."
+
+# Temporadas.
+season:
+  disabled: "<red>Las temporadas estan desactivadas en el config."
+  info-header: "<gray>--- <white>Temporada actual</white> <gray>---"
+  info-name: "<gray>Nombre: <white>{name}</white>"
+  info-days: "<gray>Lleva <white>{days}</white> dias abierta."
+  info-none: "<red>No hay ninguna temporada abierta."
+  closing: "<yellow>Cerrando la temporada, puede tardar un poco..."
+  closed: "<green>{result}"
+  reset-notice: "<gold>La temporada ha terminado! Tu Elo se ha ajustado para la nueva."
 
 party:
   disabled: "<red>Las parties estan desactivadas en este servidor."
@@ -151,10 +185,14 @@ help:
   - "<gray>  Cuando haya suficiente gente, te mete solo en la partida."
   - "<white>/ranked leave</white> <gray>- te sales de la cola"
   - ""
+  - "<white>/ranked menu</white> <gray>- todo lo anterior en un menu"
+  - ""
   - "<gold>Tu progreso:</gold>"
   - "<white>/ranked stats [jugador]</white> <gray>- tu Elo, division, victorias..."
+  - "<white>/ranked history [jugador]</white> <gray>- tus ultimas partidas"
   - "<white>/ranked top [pagina]</white> <gray>- el ranking del servidor"
   - "<white>/ranked queues</white> <gray>- cuanta gente hay esperando"
+  - "<white>/ranked season</white> <gray>- temporada actual"
   - ""
   - "<gold>Jugar con amigos:</gold>"
   - "<white>/ranked party invite <jugador></white> <gray>- invitar a tu party"
@@ -185,4 +223,5 @@ help-admin:
   - "<white>/ranked unbanip <ip></white> <gray>- quitar el baneo de IP"
   - "<white>/ranked bans</white> <gray>- listar baneos activos"
   - "<white>/ranked unpenalize <jugador|*></white> <gray>- quitar penalizacion por abandono"
+  - "<white>/ranked season end [nombre]</white> <gray>- cerrar temporada y repartir premios"
   - "<gray>Tiempo: <white>30m</white>, <white>2h</white>, <white>7d</white>, <white>1w</white> o <white>perm</white>."

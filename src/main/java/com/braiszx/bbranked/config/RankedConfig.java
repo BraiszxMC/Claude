@@ -82,6 +82,49 @@ public final class RankedConfig {
     private boolean actionbarMvpEnabled;
     private int actionbarMvpSeconds;
 
+    // --- anti-boosting ---
+    private boolean repeatOpponentEnabled;
+    private int repeatFreeMatches;
+    private double repeatReductionPerMatch;
+    private double repeatMinMultiplier;
+    private int repeatResetHours;
+    private int repeatAlertAfter;
+
+    // --- confirmacion de partida ---
+    private boolean readyCheckEnabled;
+    private int readyCheckSeconds;
+    private int readyCheckPenaltySeconds;
+
+    // --- decaimiento ---
+    private boolean decayEnabled;
+    private int decayInactiveDays;
+    private int decayEloPerDay;
+    private int decayFloor;
+    private boolean decayRequirePlacements;
+    private int decayCheckIntervalMinutes;
+
+    // --- temporadas ---
+    private boolean seasonEnabled;
+    private int seasonResetTarget;
+    private double seasonResetFactor;
+    private Map<Integer, List<String>> seasonTopRewards = Collections.emptyMap();
+    private Map<String, List<String>> seasonRankRewards = Collections.emptyMap();
+
+    // --- menu ---
+    private boolean menuEnabled;
+    private String menuTitle;
+    private Map<String, String> menuModeIcons = Collections.emptyMap();
+    private String menuDefaultIcon;
+
+    // --- discord ---
+    private boolean discordEnabled;
+    private String discordWebhookUrl;
+    private String discordUsername;
+    private boolean discordMatchResults;
+    private boolean discordRankChanges;
+    private boolean discordSeasonEnd;
+    private boolean discordBoostingAlerts;
+
     private Map<String, QueueMode> modes = Collections.emptyMap();
     private List<RankTier> ranks = Collections.emptyList();
 
@@ -152,6 +195,43 @@ public final class RankedConfig {
         actionbarMvpEnabled = c.getBoolean("actionbar.mvp-enabled", true);
         actionbarMvpSeconds = Math.max(1, c.getInt("actionbar.mvp-seconds", 5));
 
+        repeatOpponentEnabled = c.getBoolean("elo.repeat-opponent.enabled", true);
+        repeatFreeMatches = Math.max(0, c.getInt("elo.repeat-opponent.free-matches", 2));
+        repeatReductionPerMatch = c.getDouble("elo.repeat-opponent.reduction-per-match", 0.25D);
+        repeatMinMultiplier = Math.max(0.0D, c.getDouble("elo.repeat-opponent.min-multiplier", 0.15D));
+        repeatResetHours = Math.max(1, c.getInt("elo.repeat-opponent.reset-hours", 24));
+        repeatAlertAfter = c.getInt("elo.repeat-opponent.alert-after", 6);
+
+        readyCheckEnabled = c.getBoolean("ready-check.enabled", true);
+        readyCheckSeconds = Math.max(5, c.getInt("ready-check.seconds", 20));
+        readyCheckPenaltySeconds = Math.max(0, c.getInt("ready-check.penalty-seconds", 120));
+
+        decayEnabled = c.getBoolean("decay.enabled", false);
+        decayInactiveDays = Math.max(1, c.getInt("decay.inactive-days", 14));
+        decayEloPerDay = Math.max(0, c.getInt("decay.elo-per-day", 10));
+        decayFloor = c.getInt("decay.floor", 1200);
+        decayRequirePlacements = c.getBoolean("decay.require-placements", true);
+        decayCheckIntervalMinutes = Math.max(5, c.getInt("decay.check-interval-minutes", 60));
+
+        seasonEnabled = c.getBoolean("season.enabled", true);
+        seasonResetTarget = c.getInt("season.soft-reset.target", 1000);
+        seasonResetFactor = Math.max(0.0D, Math.min(1.0D, c.getDouble("season.soft-reset.factor", 0.5D)));
+        seasonTopRewards = loadTopRewards(c);
+        seasonRankRewards = loadRankRewards(c);
+
+        menuEnabled = c.getBoolean("menu.enabled", true);
+        menuTitle = c.getString("menu.title", "<gold>Ranked</gold>");
+        menuModeIcons = loadModeIcons(c);
+        menuDefaultIcon = c.getString("menu.default-mode-icon", "LEATHER_BOOTS");
+
+        discordEnabled = c.getBoolean("discord.enabled", false);
+        discordWebhookUrl = c.getString("discord.webhook-url", "");
+        discordUsername = c.getString("discord.username", "Ranked");
+        discordMatchResults = c.getBoolean("discord.send-match-results", true);
+        discordRankChanges = c.getBoolean("discord.send-rank-changes", true);
+        discordSeasonEnd = c.getBoolean("discord.send-season-end", true);
+        discordBoostingAlerts = c.getBoolean("discord.send-boosting-alerts", true);
+
         this.modes = loadModes(c);
         this.ranks = loadRanks(c);
     }
@@ -200,6 +280,46 @@ public final class RankedConfig {
             result.add(new RankTier("sin-rango", "<gray>Sin rango</gray>", 0));
         }
         return Collections.unmodifiableList(result);
+    }
+
+    private Map<Integer, List<String>> loadTopRewards(FileConfiguration c) {
+        Map<Integer, List<String>> result = new LinkedHashMap<>();
+        ConfigurationSection section = c.getConfigurationSection("season.rewards.top");
+        if (section == null) {
+            return Collections.emptyMap();
+        }
+        for (String key : section.getKeys(false)) {
+            try {
+                result.put(Integer.parseInt(key), List.copyOf(section.getStringList(key)));
+            } catch (NumberFormatException exception) {
+                plugin.getLogger().warning("Premio de temporada con puesto invalido: '" + key + "'.");
+            }
+        }
+        return Collections.unmodifiableMap(result);
+    }
+
+    private Map<String, List<String>> loadRankRewards(FileConfiguration c) {
+        Map<String, List<String>> result = new LinkedHashMap<>();
+        ConfigurationSection section = c.getConfigurationSection("season.rewards.ranks");
+        if (section == null) {
+            return Collections.emptyMap();
+        }
+        for (String key : section.getKeys(false)) {
+            result.put(key.toLowerCase(Locale.ROOT), List.copyOf(section.getStringList(key)));
+        }
+        return Collections.unmodifiableMap(result);
+    }
+
+    private Map<String, String> loadModeIcons(FileConfiguration c) {
+        Map<String, String> result = new LinkedHashMap<>();
+        ConfigurationSection section = c.getConfigurationSection("menu.mode-icons");
+        if (section == null) {
+            return Collections.emptyMap();
+        }
+        for (String key : section.getKeys(false)) {
+            result.put(key.toLowerCase(Locale.ROOT), section.getString(key, "LEATHER_BOOTS"));
+        }
+        return Collections.unmodifiableMap(result);
     }
 
     /**
@@ -423,5 +543,129 @@ public final class RankedConfig {
 
     public int actionbarMvpSeconds() {
         return actionbarMvpSeconds;
+    }
+
+    public boolean repeatOpponentEnabled() {
+        return repeatOpponentEnabled;
+    }
+
+    public int repeatFreeMatches() {
+        return repeatFreeMatches;
+    }
+
+    public double repeatReductionPerMatch() {
+        return repeatReductionPerMatch;
+    }
+
+    public double repeatMinMultiplier() {
+        return repeatMinMultiplier;
+    }
+
+    public int repeatResetHours() {
+        return repeatResetHours;
+    }
+
+    public long repeatResetMillis() {
+        return repeatResetHours * 3_600_000L;
+    }
+
+    public int repeatAlertAfter() {
+        return repeatAlertAfter;
+    }
+
+    public boolean readyCheckEnabled() {
+        return readyCheckEnabled;
+    }
+
+    public int readyCheckSeconds() {
+        return readyCheckSeconds;
+    }
+
+    public int readyCheckPenaltySeconds() {
+        return readyCheckPenaltySeconds;
+    }
+
+    public boolean decayEnabled() {
+        return decayEnabled;
+    }
+
+    public int decayInactiveDays() {
+        return decayInactiveDays;
+    }
+
+    public int decayEloPerDay() {
+        return decayEloPerDay;
+    }
+
+    public int decayFloor() {
+        return decayFloor;
+    }
+
+    public boolean decayRequirePlacements() {
+        return decayRequirePlacements;
+    }
+
+    public int decayCheckIntervalMinutes() {
+        return decayCheckIntervalMinutes;
+    }
+
+    public boolean seasonEnabled() {
+        return seasonEnabled;
+    }
+
+    public int seasonResetTarget() {
+        return seasonResetTarget;
+    }
+
+    public double seasonResetFactor() {
+        return seasonResetFactor;
+    }
+
+    public Map<Integer, List<String>> seasonTopRewards() {
+        return seasonTopRewards;
+    }
+
+    public Map<String, List<String>> seasonRankRewards() {
+        return seasonRankRewards;
+    }
+
+    public boolean menuEnabled() {
+        return menuEnabled;
+    }
+
+    public String menuTitle() {
+        return menuTitle;
+    }
+
+    public String menuIconFor(String modeId) {
+        return menuModeIcons.getOrDefault(modeId.toLowerCase(Locale.ROOT), menuDefaultIcon);
+    }
+
+    public boolean discordEnabled() {
+        return discordEnabled && discordWebhookUrl != null && !discordWebhookUrl.isBlank();
+    }
+
+    public String discordWebhookUrl() {
+        return discordWebhookUrl;
+    }
+
+    public String discordUsername() {
+        return discordUsername;
+    }
+
+    public boolean discordMatchResults() {
+        return discordMatchResults;
+    }
+
+    public boolean discordRankChanges() {
+        return discordRankChanges;
+    }
+
+    public boolean discordSeasonEnd() {
+        return discordSeasonEnd;
+    }
+
+    public boolean discordBoostingAlerts() {
+        return discordBoostingAlerts;
     }
 }

@@ -7,15 +7,21 @@ import com.braiszx.bbranked.config.QueueMode;
 import com.braiszx.bbranked.config.RankTier;
 import com.braiszx.bbranked.config.RankedConfig;
 import com.braiszx.bbranked.data.LeaderboardEntry;
+import com.braiszx.bbranked.data.MatchRecord;
 import com.braiszx.bbranked.data.PlayerStats;
 import com.braiszx.bbranked.data.StatsManager;
 import com.braiszx.bbranked.match.MatchManager;
 import com.braiszx.bbranked.match.RankedMatch;
+import com.braiszx.bbranked.menu.RankedMenu;
 import com.braiszx.bbranked.party.Party;
 import com.braiszx.bbranked.party.PartyManager;
 import com.braiszx.bbranked.queue.QueueManager;
+import com.braiszx.bbranked.ready.ReadyCheckManager;
+import com.braiszx.bbranked.season.Season;
+import com.braiszx.bbranked.season.SeasonManager;
 import com.braiszx.bbranked.util.Messages;
 import com.braiszx.bbranked.util.Sounds;
+import com.braiszx.bbranked.hook.DiscordWebhook;
 import com.github.shynixn.blockball.contract.SoccerGame;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
@@ -26,6 +32,9 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
 
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -46,10 +55,13 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
     private final BanManager bans;
     private final PartyManager parties;
     private final Sounds sounds;
+    private final ReadyCheckManager readyChecks;
+    private final SeasonManager seasons;
 
     public RankedCommand(BlockBallRankedPlugin plugin, RankedConfig config, Messages messages,
                          StatsManager stats, QueueManager queues, MatchManager matches, BanManager bans,
-                         PartyManager parties, Sounds sounds) {
+                         PartyManager parties, Sounds sounds,
+                         ReadyCheckManager readyChecks, SeasonManager seasons) {
         this.plugin = plugin;
         this.config = config;
         this.messages = messages;
@@ -59,6 +71,8 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
         this.bans = bans;
         this.parties = parties;
         this.sounds = sounds;
+        this.readyChecks = readyChecks;
+        this.seasons = seasons;
     }
 
     @Override
@@ -87,6 +101,10 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
             case "bans", "baneos" -> handleBans(sender);
             case "unpenalize", "despenalizar" -> handleUnpenalize(sender, args);
             case "party", "grupo" -> handleParty(sender, args);
+            case "accept", "aceptar" -> handleAccept(sender);
+            case "history", "historial" -> handleHistory(sender, args);
+            case "season", "temporada" -> handleSeason(sender, args);
+            case "menu" -> handleMenu(sender);
             default -> sendHelp(sender);
         }
         return true;
@@ -414,6 +432,156 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
         }
         matches.abort(match, true);
         messages.send(sender, "admin.match-ended");
+    }
+
+    /**
+     * Confirma una partida encontrada (el boton clicable del chat).
+     */
+    private void handleAccept(CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            messages.send(sender, "players-only");
+            return;
+        }
+        readyChecks.accept(player);
+    }
+
+    private void handleMenu(CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            messages.send(sender, "players-only");
+            return;
+        }
+        if (!config.menuEnabled()) {
+            sendHelp(sender);
+            return;
+        }
+        new RankedMenu(config, messages, stats, queues, parties).open(player);
+    }
+
+    // ------------------------------------------------------------------
+    //  Historial
+    // ------------------------------------------------------------------
+
+    private void handleHistory(CommandSender sender, String[] args) {
+        if (!sender.hasPermission("bbranked.stats")) {
+            messages.send(sender, "no-permission");
+            return;
+        }
+
+        String target;
+        int pageArg = 2;
+        if (args.length >= 2 && !isNumber(args[1])) {
+            target = args[1];
+        } else if (sender instanceof Player player) {
+            target = player.getName();
+            pageArg = 1;
+        } else {
+            messages.send(sender, "players-only");
+            return;
+        }
+
+        int page = 1;
+        if (args.length > pageArg) {
+            try {
+                page = Math.max(1, Integer.parseInt(args[pageArg]));
+            } catch (NumberFormatException exception) {
+                messages.send(sender, "invalid-number", Map.of("input", args[pageArg]));
+                return;
+            }
+        }
+
+        int perPage = 10;
+        int offset = (page - 1) * perPage;
+        int requestedPage = page;
+
+        resolvePlayer(target, resolved -> {
+            if (resolved == null) {
+                messages.send(sender, "stats.no-data");
+                return;
+            }
+            stats.storage().matchHistory(resolved.uuid(), perPage, offset)
+                    .thenAccept(records -> Bukkit.getScheduler().runTask(plugin,
+                            () -> renderHistory(sender, resolved, records, requestedPage)));
+        });
+    }
+
+    private void renderHistory(CommandSender sender, ResolvedPlayer target,
+                               List<MatchRecord> records, int page) {
+        messages.sendRaw(sender, "history.header", Map.of(
+                "player", target.name(), "page", String.valueOf(page)));
+
+        if (records.isEmpty()) {
+            messages.sendRaw(sender, "history.empty");
+            return;
+        }
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM HH:mm")
+                .withZone(ZoneId.systemDefault());
+
+        for (MatchRecord record : records) {
+            int outcome = record.outcomeFor(target.uuid());
+            int delta = record.eloChangeFor(target.uuid());
+            String key = outcome > 0 ? "history.win" : outcome < 0 ? "history.loss" : "history.draw";
+
+            messages.sendRaw(sender, key, Map.of(
+                    "date", formatter.format(Instant.ofEpochMilli(record.playedAt())),
+                    "mode", record.mode(),
+                    "red", String.valueOf(record.redScore()),
+                    "blue", String.valueOf(record.blueScore()),
+                    "delta", (delta >= 0 ? "+" : "") + delta));
+        }
+    }
+
+    private static boolean isNumber(String value) {
+        try {
+            Integer.parseInt(value);
+            return true;
+        } catch (NumberFormatException exception) {
+            return false;
+        }
+    }
+
+    // ------------------------------------------------------------------
+    //  Temporadas
+    // ------------------------------------------------------------------
+
+    private void handleSeason(CommandSender sender, String[] args) {
+        if (!config.seasonEnabled()) {
+            messages.send(sender, "season.disabled");
+            return;
+        }
+
+        String sub = args.length >= 2 ? args[1].toLowerCase(Locale.ROOT) : "info";
+        if (sub.equals("end") || sub.equals("cerrar")) {
+            if (!sender.hasPermission("bbranked.admin")) {
+                messages.send(sender, "no-permission");
+                return;
+            }
+            String nextName = args.length >= 3
+                    ? String.join(" ", List.of(args).subList(2, args.length))
+                    : "Temporada " + (seasons.current() == null ? 2 : seasons.current().id() + 1);
+
+            messages.send(sender, "season.closing");
+            seasons.closeSeason(nextName, result -> {
+                messages.send(sender, "season.closed", Map.of("result", result));
+                for (Player online : Bukkit.getOnlinePlayers()) {
+                    messages.send(online, "season.reset-notice");
+                    sounds.play(online, "rank-up");
+                }
+                if (config.discordSeasonEnd()) {
+                    plugin.discord().send("Fin de temporada", result, DiscordWebhook.COLOR_GOLD);
+                }
+            });
+            return;
+        }
+
+        Season season = seasons.current();
+        if (season == null) {
+            messages.send(sender, "season.info-none");
+            return;
+        }
+        messages.sendRaw(sender, "season.info-header");
+        messages.sendRaw(sender, "season.info-name", Map.of("name", season.name()));
+        messages.sendRaw(sender, "season.info-days", Map.of("days", String.valueOf(season.daysRunning())));
     }
 
     // ------------------------------------------------------------------
@@ -864,7 +1032,8 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
         List<String> options = new ArrayList<>();
 
         if (args.length == 1) {
-            options.addAll(List.of("join", "leave", "stats", "top", "queues", "party", "help"));
+            options.addAll(List.of("join", "leave", "stats", "top", "queues", "party", "menu",
+                    "history", "season", "accept", "help"));
             if (sender.hasPermission("bbranked.admin")) {
                 options.addAll(List.of("reload", "check", "setelo", "reset", "matches", "forceend",
                         "ban", "unban", "banip", "unbanip", "bans", "unpenalize"));
@@ -878,7 +1047,9 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
                     options.add("*");
                     Bukkit.getOnlinePlayers().forEach(player -> options.add(player.getName()));
                 }
-                case "stats", "elo", "setelo", "reset", "forceend", "ban", "unban", "banip" ->
+                case "season", "temporada" -> options.addAll(List.of("info", "end"));
+                case "stats", "elo", "setelo", "reset", "forceend", "ban", "unban", "banip",
+                     "history", "historial" ->
                         Bukkit.getOnlinePlayers().forEach(player -> options.add(player.getName()));
                 case "unbanip" -> bans.activeBans().stream()
                         .filter(entry -> entry.type() == BanEntry.BanType.IP)

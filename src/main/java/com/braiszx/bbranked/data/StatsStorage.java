@@ -2,6 +2,7 @@ package com.braiszx.bbranked.data;
 
 import com.braiszx.bbranked.ban.BanEntry;
 import com.braiszx.bbranked.config.RankedConfig;
+import com.braiszx.bbranked.season.Season;
 import org.bukkit.plugin.Plugin;
 
 import java.io.File;
@@ -12,8 +13,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -35,6 +38,9 @@ public final class StatsStorage implements AutoCloseable {
     private final String playersTable;
     private final String matchesTable;
     private final String bansTable;
+    private final String encountersTable;
+    private final String seasonsTable;
+    private final String seasonResultsTable;
 
     private Connection connection;
 
@@ -45,6 +51,9 @@ public final class StatsStorage implements AutoCloseable {
         this.playersTable = config.tablePrefix() + "players";
         this.matchesTable = config.tablePrefix() + "matches";
         this.bansTable = config.tablePrefix() + "bans";
+        this.encountersTable = config.tablePrefix() + "encounters";
+        this.seasonsTable = config.tablePrefix() + "seasons";
+        this.seasonResultsTable = config.tablePrefix() + "season_results";
         this.executor = Executors.newSingleThreadExecutor(runnable -> {
             Thread thread = new Thread(runnable, "BlockBallRanked-DB");
             thread.setDaemon(true);
@@ -144,9 +153,45 @@ public final class StatsStorage implements AutoCloseable {
                     "CREATE INDEX IF NOT EXISTS idx_" + playersTable + "_elo ON " + playersTable + " (elo)");
         }
 
+        try (Statement statement = connection().createStatement()) {
+            // Cuantas veces se han enfrentado dos jugadores hace poco, para el
+            // anti-boosting.
+            statement.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS %s (
+                        player VARCHAR(36) NOT NULL,
+                        opponent VARCHAR(36) NOT NULL,
+                        encounters INT NOT NULL,
+                        last_at BIGINT NOT NULL,
+                        PRIMARY KEY (player, opponent)
+                    )""".formatted(encountersTable));
+
+            statement.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS %s (
+                        id %s,
+                        name VARCHAR(64) NOT NULL,
+                        started_at BIGINT NOT NULL,
+                        ended_at BIGINT
+                    )""".formatted(seasonsTable, mysql ? "INT AUTO_INCREMENT PRIMARY KEY"
+                    : "INTEGER PRIMARY KEY AUTOINCREMENT"));
+
+            statement.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS %s (
+                        season_id INT NOT NULL,
+                        uuid VARCHAR(36) NOT NULL,
+                        name VARCHAR(16) NOT NULL,
+                        position INT NOT NULL,
+                        elo INT NOT NULL,
+                        wins INT NOT NULL,
+                        losses INT NOT NULL,
+                        draws INT NOT NULL,
+                        PRIMARY KEY (season_id, uuid)
+                    )""".formatted(seasonResultsTable));
+        }
+
         // Columnas anadidas despues de la primera version. Para una tabla que
         // ya existe hay que anadirlas a mano.
         addColumnIfMissing(playersTable, "mvps", "INT NOT NULL DEFAULT 0");
+        addColumnIfMissing(playersTable, "last_decay", "BIGINT NOT NULL DEFAULT 0");
     }
 
     /**
@@ -392,6 +437,365 @@ public final class StatsStorage implements AutoCloseable {
                 plugin.getLogger().log(Level.SEVERE, "Error borrando las estadisticas de " + uuid, exception);
             }
         }, executor);
+    }
+
+    // ------------------------------------------------------------------
+    //  Enfrentamientos repetidos (anti-boosting)
+    // ------------------------------------------------------------------
+
+    /**
+     * Cuantas veces se ha enfrentado cada jugador de un equipo a los del otro
+     * hace poco. Se queda con el maximo por jugador, que es lo que penaliza.
+     *
+     * @param staleMillis a partir de cuanto tiempo un enfrentamiento ya no cuenta
+     */
+    public CompletableFuture<Map<UUID, Integer>> loadEncounters(List<UUID> teamA, List<UUID> teamB,
+                                                                long staleMillis) {
+        return CompletableFuture.supplyAsync(() -> {
+            Map<UUID, Integer> result = new HashMap<>();
+            long cutoff = System.currentTimeMillis() - staleMillis;
+            String sql = "SELECT encounters FROM " + encountersTable
+                    + " WHERE player = ? AND opponent = ? AND last_at >= ?";
+
+            try (PreparedStatement statement = connection().prepareStatement(sql)) {
+                for (List<UUID> pair : List.of(teamA, teamB)) {
+                    List<UUID> others = pair == teamA ? teamB : teamA;
+                    for (UUID player : pair) {
+                        int worst = 0;
+                        for (UUID opponent : others) {
+                            statement.setString(1, player.toString());
+                            statement.setString(2, opponent.toString());
+                            statement.setLong(3, cutoff);
+                            try (ResultSet rs = statement.executeQuery()) {
+                                if (rs.next()) {
+                                    worst = Math.max(worst, rs.getInt("encounters"));
+                                }
+                            }
+                        }
+                        result.put(player, worst);
+                    }
+                }
+            } catch (SQLException exception) {
+                plugin.getLogger().log(Level.SEVERE, "Error cargando enfrentamientos previos", exception);
+            }
+            return result;
+        }, executor);
+    }
+
+    /**
+     * Apunta que estos dos equipos se han enfrentado. Si el ultimo
+     * enfrentamiento es viejo, el contador vuelve a empezar.
+     */
+    public CompletableFuture<Void> recordEncounters(List<UUID> teamA, List<UUID> teamB, long staleMillis) {
+        return CompletableFuture.runAsync(() -> {
+            long now = System.currentTimeMillis();
+            long cutoff = now - staleMillis;
+
+            for (UUID a : teamA) {
+                for (UUID b : teamB) {
+                    bumpEncounter(a, b, now, cutoff);
+                    bumpEncounter(b, a, now, cutoff);
+                }
+            }
+        }, executor);
+    }
+
+    private void bumpEncounter(UUID player, UUID opponent, long now, long cutoff) {
+        String select = "SELECT encounters, last_at FROM " + encountersTable
+                + " WHERE player = ? AND opponent = ?";
+        try (PreparedStatement statement = connection().prepareStatement(select)) {
+            statement.setString(1, player.toString());
+            statement.setString(2, opponent.toString());
+
+            int next = 1;
+            boolean exists = false;
+            try (ResultSet rs = statement.executeQuery()) {
+                if (rs.next()) {
+                    exists = true;
+                    // Si hace mucho que no se ven, el contador se reinicia.
+                    next = rs.getLong("last_at") >= cutoff ? rs.getInt("encounters") + 1 : 1;
+                }
+            }
+
+            String sql = exists
+                    ? "UPDATE " + encountersTable + " SET encounters = ?, last_at = ? WHERE player = ? AND opponent = ?"
+                    : "INSERT INTO " + encountersTable + " (encounters, last_at, player, opponent) VALUES (?, ?, ?, ?)";
+            try (PreparedStatement write = connection().prepareStatement(sql)) {
+                write.setInt(1, next);
+                write.setLong(2, now);
+                write.setString(3, player.toString());
+                write.setString(4, opponent.toString());
+                write.executeUpdate();
+            }
+        } catch (SQLException exception) {
+            plugin.getLogger().log(Level.SEVERE, "Error guardando el enfrentamiento", exception);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    //  Historial
+    // ------------------------------------------------------------------
+
+    /**
+     * Ultimas partidas de un jugador, de la mas reciente a la mas antigua.
+     *
+     * <p>Filtra con LIKE sobre las columnas de equipos, que guardan los uuid
+     * separados por comas. Para el volumen de un servidor de Minecraft es de
+     * sobra; si algun dia hay cientos de miles de partidas, habria que
+     * normalizarlo en una tabla aparte.</p>
+     */
+    public CompletableFuture<List<MatchRecord>> matchHistory(UUID uuid, int limit, int offset) {
+        return CompletableFuture.supplyAsync(() -> {
+            List<MatchRecord> records = new ArrayList<>();
+            String needle = "%" + uuid + "%";
+            String sql = "SELECT * FROM " + matchesTable
+                    + " WHERE red_players LIKE ? OR blue_players LIKE ?"
+                    + " ORDER BY played_at DESC LIMIT ? OFFSET ?";
+
+            try (PreparedStatement statement = connection().prepareStatement(sql)) {
+                statement.setString(1, needle);
+                statement.setString(2, needle);
+                statement.setInt(3, limit);
+                statement.setInt(4, offset);
+                try (ResultSet rs = statement.executeQuery()) {
+                    while (rs.next()) {
+                        records.add(new MatchRecord(
+                                rs.getString("mode"),
+                                rs.getString("arena"),
+                                rs.getInt("red_score"),
+                                rs.getInt("blue_score"),
+                                rs.getString("winner"),
+                                parseUuids(rs.getString("red_players")),
+                                parseUuids(rs.getString("blue_players")),
+                                parseEloChanges(rs.getString("elo_changes")),
+                                rs.getLong("played_at")));
+                    }
+                }
+            } catch (SQLException exception) {
+                plugin.getLogger().log(Level.SEVERE, "Error cargando el historial de " + uuid, exception);
+            }
+            return records;
+        }, executor);
+    }
+
+    private static List<UUID> parseUuids(String csv) {
+        List<UUID> result = new ArrayList<>();
+        if (csv == null || csv.isBlank()) {
+            return result;
+        }
+        for (String part : csv.split(",")) {
+            try {
+                result.add(UUID.fromString(part.trim()));
+            } catch (IllegalArgumentException ignored) {
+                // fila corrupta, se ignora
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Formato guardado: {@code uuid:antes>despues,uuid:antes>despues}
+     */
+    private static Map<UUID, Integer> parseEloChanges(String raw) {
+        Map<UUID, Integer> result = new HashMap<>();
+        if (raw == null || raw.isBlank()) {
+            return result;
+        }
+        for (String part : raw.split(",")) {
+            try {
+                String[] halves = part.split(":");
+                String[] values = halves[1].split(">");
+                int before = Integer.parseInt(values[0]);
+                int after = Integer.parseInt(values[1]);
+                result.put(UUID.fromString(halves[0]), after - before);
+            } catch (RuntimeException ignored) {
+                // entrada corrupta, se ignora
+            }
+        }
+        return result;
+    }
+
+    // ------------------------------------------------------------------
+    //  Temporadas
+    // ------------------------------------------------------------------
+
+    /**
+     * Temporada abierta, creando la primera si no hay ninguna. Bloquea: se
+     * llama al arrancar.
+     */
+    public Season currentSeasonBlocking() {
+        String sql = "SELECT * FROM " + seasonsTable + " WHERE ended_at IS NULL ORDER BY id DESC LIMIT 1";
+        try (Statement statement = connection().createStatement();
+             ResultSet rs = statement.executeQuery(sql)) {
+            if (rs.next()) {
+                return new Season(rs.getInt("id"), rs.getString("name"),
+                        rs.getLong("started_at"), 0L);
+            }
+        } catch (SQLException exception) {
+            plugin.getLogger().log(Level.SEVERE, "Error cargando la temporada actual", exception);
+            return null;
+        }
+        return startSeasonBlocking("Temporada 1");
+    }
+
+    public Season startSeasonBlocking(String name) {
+        String sql = "INSERT INTO " + seasonsTable + " (name, started_at, ended_at) VALUES (?, ?, NULL)";
+        try (PreparedStatement statement = connection().prepareStatement(sql)) {
+            statement.setString(1, name);
+            statement.setLong(2, System.currentTimeMillis());
+            statement.executeUpdate();
+        } catch (SQLException exception) {
+            plugin.getLogger().log(Level.SEVERE, "Error creando la temporada", exception);
+            return null;
+        }
+        return currentSeasonBlocking();
+    }
+
+    public void closeSeasonBlocking(int seasonId) {
+        try (PreparedStatement statement = connection().prepareStatement(
+                "UPDATE " + seasonsTable + " SET ended_at = ? WHERE id = ?")) {
+            statement.setLong(1, System.currentTimeMillis());
+            statement.setInt(2, seasonId);
+            statement.executeUpdate();
+        } catch (SQLException exception) {
+            plugin.getLogger().log(Level.SEVERE, "Error cerrando la temporada", exception);
+        }
+    }
+
+    /**
+     * Guarda el ranking final de una temporada.
+     */
+    public void saveSeasonResultsBlocking(int seasonId, List<LeaderboardEntry> ranking) {
+        String sql = "INSERT INTO " + seasonResultsTable
+                + " (season_id, uuid, name, position, elo, wins, losses, draws) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        try (PreparedStatement statement = connection().prepareStatement(sql)) {
+            for (int i = 0; i < ranking.size(); i++) {
+                LeaderboardEntry entry = ranking.get(i);
+                statement.setInt(1, seasonId);
+                statement.setString(2, entry.uuid().toString());
+                statement.setString(3, entry.name());
+                statement.setInt(4, i + 1);
+                statement.setInt(5, entry.elo());
+                statement.setInt(6, entry.wins());
+                statement.setInt(7, entry.losses());
+                statement.setInt(8, entry.draws());
+                statement.addBatch();
+            }
+            statement.executeBatch();
+        } catch (SQLException exception) {
+            plugin.getLogger().log(Level.SEVERE, "Error guardando el ranking de la temporada", exception);
+        }
+    }
+
+    /**
+     * Todos los jugadores con partidas jugadas, para el cierre de temporada.
+     */
+    public List<LeaderboardEntry> allRankedPlayersBlocking() {
+        List<LeaderboardEntry> entries = new ArrayList<>();
+        String sql = "SELECT uuid, name, elo, wins, losses, draws FROM " + playersTable
+                + " WHERE (wins + losses + draws) > 0 ORDER BY elo DESC";
+        try (Statement statement = connection().createStatement();
+             ResultSet rs = statement.executeQuery(sql)) {
+            while (rs.next()) {
+                entries.add(new LeaderboardEntry(
+                        UUID.fromString(rs.getString("uuid")),
+                        rs.getString("name"),
+                        rs.getInt("elo"),
+                        rs.getInt("wins"),
+                        rs.getInt("losses"),
+                        rs.getInt("draws")));
+            }
+        } catch (SQLException exception) {
+            plugin.getLogger().log(Level.SEVERE, "Error cargando los jugadores de la temporada", exception);
+        }
+        return entries;
+    }
+
+    /**
+     * Aplica el reset suave de temporada a todo el mundo y pone los
+     * contadores a cero.
+     */
+    public void softResetAllBlocking(int target, double factor) {
+        String sql = "UPDATE " + playersTable + " SET elo = CAST(? + (elo - ?) * ? AS INT),"
+                + " wins = 0, losses = 0, draws = 0, goals = 0, mvps = 0, win_streak = 0";
+        try (PreparedStatement statement = connection().prepareStatement(sql)) {
+            statement.setInt(1, target);
+            statement.setInt(2, target);
+            statement.setDouble(3, factor);
+            statement.executeUpdate();
+        } catch (SQLException exception) {
+            plugin.getLogger().log(Level.SEVERE, "Error aplicando el reset de temporada", exception);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    //  Decaimiento por inactividad
+    // ------------------------------------------------------------------
+
+    /**
+     * Aplica el decaimiento y devuelve a cuanta gente le ha afectado.
+     */
+    public CompletableFuture<Integer> applyDecay(int inactiveDays, int eloPerDay, int floor,
+                                                 int minMatches) {
+        return CompletableFuture.supplyAsync(() -> {
+            long now = System.currentTimeMillis();
+            long dayMillis = 86_400_000L;
+            long inactiveSince = now - inactiveDays * dayMillis;
+            int affected = 0;
+
+            String select = "SELECT uuid, elo, last_seen, last_decay FROM " + playersTable
+                    + " WHERE last_seen < ? AND elo > ? AND (wins + losses + draws) >= ?";
+            String update = "UPDATE " + playersTable + " SET elo = ?, last_decay = ? WHERE uuid = ?";
+
+            try (PreparedStatement statement = connection().prepareStatement(select)) {
+                statement.setLong(1, inactiveSince);
+                statement.setInt(2, floor);
+                statement.setInt(3, minMatches);
+
+                List<Object[]> updates = new ArrayList<>();
+                try (ResultSet rs = statement.executeQuery()) {
+                    while (rs.next()) {
+                        long lastSeen = rs.getLong("last_seen");
+                        long lastDecay = rs.getLong("last_decay");
+                        // Se cobra desde el ultimo cobro, o desde que empezo a
+                        // estar inactivo si nunca se le habia cobrado.
+                        long from = Math.max(lastDecay, lastSeen + inactiveDays * dayMillis);
+                        long days = (now - from) / dayMillis;
+                        if (days <= 0) {
+                            continue;
+                        }
+                        int elo = rs.getInt("elo");
+                        int newElo = Math.max(floor, elo - (int) (days * eloPerDay));
+                        if (newElo == elo) {
+                            continue;
+                        }
+                        updates.add(new Object[]{newElo, now, rs.getString("uuid")});
+                    }
+                }
+
+                try (PreparedStatement write = connection().prepareStatement(update)) {
+                    for (Object[] row : updates) {
+                        write.setInt(1, (Integer) row[0]);
+                        write.setLong(2, (Long) row[1]);
+                        write.setString(3, (String) row[2]);
+                        write.addBatch();
+                    }
+                    write.executeBatch();
+                    affected = updates.size();
+                }
+            } catch (SQLException exception) {
+                plugin.getLogger().log(Level.SEVERE, "Error aplicando el decaimiento por inactividad", exception);
+            }
+            return affected;
+        }, executor);
+    }
+
+    /**
+     * Ejecuta algo en el hilo de la base de datos. Lo usan las operaciones de
+     * temporada, que encadenan varias consultas bloqueantes.
+     */
+    public CompletableFuture<Void> runAsync(Runnable action) {
+        return CompletableFuture.runAsync(action, executor);
     }
 
     // ------------------------------------------------------------------

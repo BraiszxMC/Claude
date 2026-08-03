@@ -5,6 +5,7 @@ import com.braiszx.bbranked.match.MatchManager;
 import com.braiszx.bbranked.match.RankedMatch;
 import com.braiszx.bbranked.party.PartyManager;
 import com.braiszx.bbranked.queue.QueueManager;
+import com.braiszx.bbranked.ready.ReadyCheckManager;
 import com.braiszx.bbranked.util.Messages;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -28,14 +29,17 @@ public final class PlayerConnectionListener implements Listener {
     private final MatchManager matches;
     private final PartyManager parties;
     private final Messages messages;
+    private final ReadyCheckManager readyChecks;
 
     public PlayerConnectionListener(StatsManager stats, QueueManager queues, MatchManager matches,
-                                    PartyManager parties, Messages messages) {
+                                    PartyManager parties, Messages messages,
+                                    ReadyCheckManager readyChecks) {
         this.stats = stats;
         this.queues = queues;
         this.matches = matches;
         this.parties = parties;
         this.messages = messages;
+        this.readyChecks = readyChecks;
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -47,6 +51,7 @@ public final class PlayerConnectionListener implements Listener {
     public void onQuit(PlayerQuitEvent event) {
         UUID uuid = event.getPlayer().getUniqueId();
         queues.remove(uuid);
+        readyChecks.remove(uuid);
 
         // Al desconectarse se sale de la party: si no, la party se quedaria
         // con un hueco imposible de llenar y nunca podria encolar.

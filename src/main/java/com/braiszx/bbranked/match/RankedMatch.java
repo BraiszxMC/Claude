@@ -26,6 +26,8 @@ public final class RankedMatch {
     private final long createdAt = System.currentTimeMillis();
     private final Set<UUID> leavers = new LinkedHashSet<>();
     private final Map<UUID, Integer> goals = new LinkedHashMap<>();
+    /** Veces que cada jugador se ha enfrentado hace poco a este mismo rival. */
+    private volatile Map<UUID, Integer> repeatCounts = Map.of();
 
     private boolean started;
     private boolean settled;
@@ -149,6 +151,25 @@ public final class RankedMatch {
 
     public Map<UUID, Integer> goals() {
         return goals;
+    }
+
+    public Map<UUID, Integer> repeatCounts() {
+        return repeatCounts;
+    }
+
+    public void repeatCounts(Map<UUID, Integer> repeatCounts) {
+        this.repeatCounts = repeatCounts;
+    }
+
+    /**
+     * El caso mas repetido de la partida, para decidir si avisar al staff.
+     */
+    public int worstRepeatCount() {
+        int worst = 0;
+        for (int count : repeatCounts.values()) {
+            worst = Math.max(worst, count);
+        }
+        return worst;
     }
 
     public void addGoal(UUID uuid) {

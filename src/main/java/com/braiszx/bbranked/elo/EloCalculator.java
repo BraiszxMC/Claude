@@ -6,6 +6,7 @@ import com.braiszx.bbranked.data.PlayerStats;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -63,6 +64,16 @@ public final class EloCalculator {
     public List<EloChange> apply(List<PlayerStats> red, List<PlayerStats> blue,
                                  int redScore, int blueScore, MatchWinner winner,
                                  Set<UUID> leavers) {
+        return apply(red, blue, redScore, blueScore, winner, leavers, Map.of());
+    }
+
+    /**
+     * @param repeatCounts veces que cada jugador se ha enfrentado hace poco al
+     *                     mismo rival, para recortar la ganancia por boosting
+     */
+    public List<EloChange> apply(List<PlayerStats> red, List<PlayerStats> blue,
+                                 int redScore, int blueScore, MatchWinner winner,
+                                 Set<UUID> leavers, Map<UUID, Integer> repeatCounts) {
         double redAverage = averageElo(red);
         double blueAverage = averageElo(blue);
         double redExpected = expectedScore(redAverage, blueAverage);
@@ -79,13 +90,28 @@ public final class EloCalculator {
         boolean draw = winner == MatchWinner.DRAW;
 
         List<EloChange> changes = new ArrayList<>(red.size() + blue.size());
-        changes.addAll(applyTeam(red, redActual, redExpected, multiplier, leavers, draw));
-        changes.addAll(applyTeam(blue, blueActual, blueExpected, multiplier, leavers, draw));
+        changes.addAll(applyTeam(red, redActual, redExpected, multiplier, leavers, draw, repeatCounts));
+        changes.addAll(applyTeam(blue, blueActual, blueExpected, multiplier, leavers, draw, repeatCounts));
         return changes;
     }
 
+    /**
+     * Recorte por jugar demasiadas veces contra el mismo rival. Solo se aplica
+     * a lo que se gana: perder siempre cuesta lo mismo, o seria una forma de
+     * escaquearse de las derrotas.
+     */
+    public double repeatMultiplier(int encounters) {
+        if (!config.repeatOpponentEnabled() || encounters <= config.repeatFreeMatches()) {
+            return 1.0D;
+        }
+        int excess = encounters - config.repeatFreeMatches();
+        double value = 1.0D - excess * config.repeatReductionPerMatch();
+        return Math.max(config.repeatMinMultiplier(), value);
+    }
+
     private List<EloChange> applyTeam(List<PlayerStats> team, double actual, double expected,
-                                      double multiplier, Set<UUID> leavers, boolean draw) {
+                                      double multiplier, Set<UUID> leavers, boolean draw,
+                                      Map<UUID, Integer> repeatCounts) {
         boolean teamHasLeaver = team.stream().anyMatch(stats -> leavers.contains(stats.uuid()));
         List<EloChange> changes = new ArrayList<>(team.size());
 
@@ -115,6 +141,9 @@ public final class EloCalculator {
                 rounded = (int) (delta >= 0 ? Math.floor(delta + 0.5D) : Math.ceil(delta - 0.5D));
             } else {
                 double delta = kFactor(stats) * (actual - expected) * multiplier;
+                if (delta > 0) {
+                    delta *= repeatMultiplier(repeatCounts.getOrDefault(stats.uuid(), 0));
+                }
                 rounded = roundDelta(delta, outcome, false);
             }
 

@@ -27,6 +27,13 @@ Sistema de **partidas rankeds con Elo** montado encima del plugin
 | **Parties** | hasta 3 amigos con Elo parecido entran juntos a la cola y juegan en el mismo equipo |
 | **Barra de accion** | mientras esperas te muestra el modo, cuanta gente falta y el tiempo |
 | **Sonidos** | cada evento (cola, gol, victoria, MVP, subir de rango...) con su sonido configurable |
+| **Confirmacion de partida** | boton clicable en el chat antes de teleportar, para que nadie entre AFK |
+| **Temporadas** | cierre con premios, ranking historico y reset suave del Elo |
+| **Historial** | `/ranked history` con tus ultimas partidas y el Elo de cada una |
+| **Menu GUI** | `/ranked menu` para entrar a la cola y ver tus datos sin comandos |
+| **Anti-boosting** | ganar muchas veces al mismo rival da cada vez menos Elo |
+| **Decay** | quien no juega baja poco a poco, para que la cima no se congele |
+| **Discord** | avisos de resultados, ascensos y fin de temporada por webhook |
 
 ---
 
@@ -299,6 +306,11 @@ de arrancar el servidor.
 | `/ranked party leave` | — | salir de la party |
 | `/ranked party disband` | — | deshacer la party (solo el lider) |
 | `/ranked party info` | — | ver quien esta en tu party |
+| `/ranked accept` | — | confirmar una partida encontrada |
+| `/ranked menu` | — | abrir el menu grafico |
+| `/ranked history [jugador] [pagina]` | `bbranked.stats` | ultimas partidas |
+| `/ranked season` | — | ver la temporada actual |
+| `/ranked season end [nombre]` | `bbranked.admin` | cerrar temporada y repartir premios |
 
 Los tiempos se escriben `30m`, `2h`, `7d`, `1w` o `perm`. Si te saltas el
 tiempo, el baneo es permanente y todo lo que escribas se toma como motivo.
@@ -308,6 +320,68 @@ desconectado (se busca en la base de datos del plugin).
 Alias: `/rk`, `/elo`, `/bbranked`.
 
 ---
+
+## Temporadas
+
+```bash
+/ranked season              # ver la temporada actual
+/ranked season end Temporada 2   # cerrarla (admin)
+```
+
+Al cerrar: se guarda el ranking final en `bbranked_season_results`, se
+ejecutan los premios, el Elo se acerca al centro y se abre la siguiente.
+
+```yaml
+season:
+  soft-reset:
+    target: 1000
+    factor: 0.5     # alguien con 2000 empieza la siguiente en 1500
+  rewards:
+    top:
+      1: ["give {player} diamond_block 10"]
+    ranks:
+      gran-maestro: ["give {player} netherite_ingot 2"]
+```
+
+No se resetea a 1000 fijo a proposito: si todo el mundo vuelve al mismo sitio,
+las primeras semanas de temporada son un caos de emparejamientos absurdos.
+Acercando al centro se conserva parte de lo que ya sabemos de cada jugador.
+
+## Anti-boosting
+
+Ganar muchas veces seguidas al **mismo** rival da cada vez menos Elo:
+
+```yaml
+elo:
+  repeat-opponent:
+    free-matches: 2         # las 2 primeras dan el Elo completo
+    reduction-per-match: 0.25   # cada una mas, un 25% menos
+    min-multiplier: 0.15    # nunca baja del 15%
+    reset-hours: 24         # 24h sin veros y el contador vuelve a cero
+    alert-after: 6          # avisa al staff (y a Discord) a partir de aqui
+```
+
+Solo afecta a lo que **ganas**. Perder cuesta siempre lo mismo — si no, dejarse
+perder seria una forma barata de escaquearse de las derrotas.
+
+Los enfrentamientos se cargan al empezar la partida (asincrono, hay minutos de
+margen) y se apuntan al terminarla.
+
+## Confirmacion de partida
+
+Cuando se forma la partida, en vez de teleportar directamente sale un boton en
+el chat:
+
+```
+-------- Partida encontrada --------
+Modo: 2v2. Tienes 20s para confirmar.
+       [ ACEPTAR PARTIDA ]
+------------------------------------
+```
+
+Es MiniMessage con `<click:run_command:'/ranked accept'>`, con sonido y cuenta
+atras en la barra de accion. Quien no confirme se lleva penalizacion de cola y
+**los demas vuelven a la cola sin perder su sitio**.
 
 ## Parties
 
@@ -426,6 +500,40 @@ a 2.0). Pon `"none"` para quitar uno. La lista completa de sonidos esta en la
 > enum `org.bukkit.Sound`. Ese enum cambia entre versiones de Minecraft y
 > habria que recompilar el plugin cada vez; con texto, poner un sonido que no
 > existe simplemente no suena en vez de romper nada.
+
+### Discord
+
+Avisos de resultados, ascensos, fin de temporada y posible boosting.
+
+```yaml
+discord:
+  enabled: true
+  webhook-url: "https://discord.com/api/webhooks/..."
+```
+
+Para conseguir la URL: **Ajustes del servidor → Integraciones → Webhooks →
+Nuevo webhook →** elige canal **→ Copiar URL**.
+
+> Esa URL es una contrasena: cualquiera que la tenga puede publicar en tu
+> canal. No subas tu `config.yml` a GitHub ni la ensenes en capturas. Si se te
+> escapa, borra el webhook en Discord y crea otro.
+
+Las peticiones van de forma asincrona con `HttpClient`, asi que un Discord
+caido o lento nunca bloquea el servidor.
+
+### Decay por inactividad
+
+```yaml
+decay:
+  enabled: false       # desactivado por defecto
+  inactive-days: 14
+  elo-per-day: 10
+  floor: 1200          # no baja de aqui
+  require-placements: true
+```
+
+Solo afecta a quien esta por encima del suelo: un jugador normal no nota nada,
+solo la gente de arriba que deja de jugar.
 
 Los mensajes estan en `messages.yml` en formato
 [MiniMessage](https://docs.advntr.dev/minimessage/format.html).

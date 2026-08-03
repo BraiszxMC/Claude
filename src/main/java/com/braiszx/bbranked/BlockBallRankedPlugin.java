@@ -3,15 +3,20 @@ package com.braiszx.bbranked;
 import com.braiszx.bbranked.ban.BanManager;
 import com.braiszx.bbranked.command.RankedCommand;
 import com.braiszx.bbranked.config.RankedConfig;
+import com.braiszx.bbranked.data.DecayService;
 import com.braiszx.bbranked.data.StatsManager;
 import com.braiszx.bbranked.data.StatsStorage;
 import com.braiszx.bbranked.elo.EloCalculator;
+import com.braiszx.bbranked.hook.DiscordWebhook;
 import com.braiszx.bbranked.hook.RankedPlaceholderExpansion;
 import com.braiszx.bbranked.listener.BlockBallListener;
 import com.braiszx.bbranked.listener.PlayerConnectionListener;
 import com.braiszx.bbranked.match.MatchManager;
+import com.braiszx.bbranked.menu.MenuListener;
 import com.braiszx.bbranked.party.PartyManager;
 import com.braiszx.bbranked.queue.QueueManager;
+import com.braiszx.bbranked.ready.ReadyCheckManager;
+import com.braiszx.bbranked.season.SeasonManager;
 import com.braiszx.bbranked.util.Messages;
 import com.braiszx.bbranked.util.Sounds;
 import com.github.shynixn.blockball.contract.GameService;
@@ -42,6 +47,10 @@ public final class BlockBallRankedPlugin extends JavaPlugin {
     private EloCalculator eloCalculator;
     private MatchManager matchManager;
     private QueueManager queueManager;
+    private ReadyCheckManager readyCheckManager;
+    private SeasonManager seasonManager;
+    private DecayService decayService;
+    private DiscordWebhook discord;
 
     private final List<BukkitTask> tasks = new ArrayList<>();
 
@@ -72,10 +81,20 @@ public final class BlockBallRankedPlugin extends JavaPlugin {
         this.banManager = new BanManager(storage);
         this.banManager.load();
         this.eloCalculator = new EloCalculator(rankedConfig);
+        this.discord = new DiscordWebhook(this, rankedConfig);
         this.partyManager = new PartyManager(rankedConfig, statsManager);
-        this.matchManager = new MatchManager(this, rankedConfig, messages, statsManager, eloCalculator, sounds);
+        this.matchManager = new MatchManager(this, rankedConfig, messages, statsManager,
+                eloCalculator, sounds, discord);
         this.queueManager = new QueueManager(rankedConfig, messages, statsManager, matchManager,
                 banManager, partyManager, sounds);
+
+        this.readyCheckManager = new ReadyCheckManager(rankedConfig, messages, sounds, matchManager);
+        this.readyCheckManager.wire(queueManager::returnToQueue, queueManager::penalizeReadyCheck);
+        this.queueManager.readyChecks(readyCheckManager);
+
+        this.seasonManager = new SeasonManager(this, rankedConfig, storage, statsManager);
+        this.seasonManager.load();
+        this.decayService = new DecayService(this, rankedConfig, statsManager);
 
         registerListeners();
         registerCommand();
@@ -102,6 +121,9 @@ public final class BlockBallRankedPlugin extends JavaPlugin {
         }
         tasks.clear();
 
+        if (readyCheckManager != null) {
+            readyCheckManager.clear();
+        }
         if (matchManager != null) {
             matchManager.shutdown();
         }
@@ -117,8 +139,9 @@ public final class BlockBallRankedPlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(
                 new BlockBallListener(rankedConfig, messages, matchManager, queueManager, banManager), this);
         getServer().getPluginManager().registerEvents(
-                new PlayerConnectionListener(statsManager, queueManager, matchManager, partyManager, messages),
-                this);
+                new PlayerConnectionListener(statsManager, queueManager, matchManager, partyManager,
+                        messages, readyCheckManager), this);
+        getServer().getPluginManager().registerEvents(new MenuListener(queueManager), this);
     }
 
     private void registerCommand() {
@@ -128,7 +151,8 @@ public final class BlockBallRankedPlugin extends JavaPlugin {
             return;
         }
         RankedCommand executor = new RankedCommand(this, rankedConfig, messages, statsManager,
-                queueManager, matchManager, banManager, partyManager, sounds);
+                queueManager, matchManager, banManager, partyManager, sounds,
+                readyCheckManager, seasonManager);
         command.setExecutor(executor);
         command.setTabCompleter(executor);
     }
@@ -157,6 +181,15 @@ public final class BlockBallRankedPlugin extends JavaPlugin {
         long actionbarInterval = rankedConfig.actionbarIntervalTicks();
         tasks.add(getServer().getScheduler().runTaskTimer(this, queueManager::updateActionbars,
                 actionbarInterval, actionbarInterval));
+
+        // Confirmacion de partida: cuenta atras cada segundo.
+        tasks.add(getServer().getScheduler().runTaskTimer(this, readyCheckManager::tick, 20L, 20L));
+
+        // Decaimiento por inactividad.
+        if (rankedConfig.decayEnabled()) {
+            long decayInterval = rankedConfig.decayCheckIntervalMinutes() * 60L * 20L;
+            tasks.add(getServer().getScheduler().runTaskTimer(this, decayService::run, 600L, decayInterval));
+        }
 
         // Refresco del ranking.
         long leaderboardInterval = rankedConfig.leaderboardRefreshSeconds() * 20L;
@@ -204,6 +237,14 @@ public final class BlockBallRankedPlugin extends JavaPlugin {
         RegisteredServiceProvider<GameService> provider =
                 getServer().getServicesManager().getRegistration(GameService.class);
         return provider == null ? null : provider.getProvider();
+    }
+
+    public SeasonManager seasonManager() {
+        return seasonManager;
+    }
+
+    public DiscordWebhook discord() {
+        return discord;
     }
 
     public MatchManager matchManager() {
