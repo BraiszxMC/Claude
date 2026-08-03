@@ -92,7 +92,7 @@ public final class RankedPlaceholderExpansion extends PlaceholderExpansion {
             // menudo y no puede esperar a la base de datos.
             return switch (key) {
                 case "elo", "peak" -> String.valueOf(config.startingElo());
-                case "wins", "losses", "draws", "matches", "goals", "streak" -> "0";
+                case "wins", "losses", "draws", "matches", "goals", "streak", "mvps" -> "0";
                 case "winrate" -> "0.0";
                 case "rank" -> legacy(config.rankOf(config.startingElo()).displayName());
                 case "rank_id" -> config.rankOf(config.startingElo()).id();
@@ -112,6 +112,7 @@ public final class RankedPlaceholderExpansion extends PlaceholderExpansion {
             case "draws" -> String.valueOf(found.draws());
             case "matches" -> String.valueOf(found.matches());
             case "goals" -> String.valueOf(found.goals());
+            case "mvps" -> String.valueOf(found.mvps());
             case "winrate" -> String.format(Locale.ROOT, "%.1f", found.winRate());
             case "streak" -> String.valueOf(found.winStreak());
             case "best_streak" -> String.valueOf(found.bestStreak());

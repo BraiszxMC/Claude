@@ -15,6 +15,7 @@ import com.braiszx.bbranked.party.Party;
 import com.braiszx.bbranked.party.PartyManager;
 import com.braiszx.bbranked.queue.QueueManager;
 import com.braiszx.bbranked.util.Messages;
+import com.braiszx.bbranked.util.Sounds;
 import com.github.shynixn.blockball.contract.SoccerGame;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
@@ -44,10 +45,11 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
     private final MatchManager matches;
     private final BanManager bans;
     private final PartyManager parties;
+    private final Sounds sounds;
 
     public RankedCommand(BlockBallRankedPlugin plugin, RankedConfig config, Messages messages,
                          StatsManager stats, QueueManager queues, MatchManager matches, BanManager bans,
-                         PartyManager parties) {
+                         PartyManager parties, Sounds sounds) {
         this.plugin = plugin;
         this.config = config;
         this.messages = messages;
@@ -56,6 +58,7 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
         this.matches = matches;
         this.bans = bans;
         this.parties = parties;
+        this.sounds = sounds;
     }
 
     @Override
@@ -194,7 +197,8 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
                 "winrate", String.format(Locale.ROOT, "%.1f", found.winRate())));
         messages.sendRaw(sender, "stats.matches", Map.of(
                 "matches", String.valueOf(found.matches()),
-                "goals", String.valueOf(found.goals())));
+                "goals", String.valueOf(found.goals()),
+                "mvps", String.valueOf(found.mvps())));
         messages.sendRaw(sender, "stats.streak", Map.of(
                 "streak", String.valueOf(found.winStreak()),
                 "best", String.valueOf(found.bestStreak())));
@@ -359,6 +363,7 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
             found.losses(0);
             found.draws(0);
             found.goals(0);
+            found.mvps(0);
             found.leaves(0);
             found.bestStreak(0);
             found.winStreak(0);
@@ -469,6 +474,7 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
                 messages.send(target, "party.invite-received", Map.of(
                         "player", player.getName(),
                         "seconds", String.valueOf(config.partyInviteTimeoutSeconds())));
+                sounds.play(target, "party-invite");
             }
             case PARTY_FULL -> messages.send(player, "party.full",
                     Map.of("max", String.valueOf(config.partyMaxSize())));
@@ -496,6 +502,7 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
         switch (result) {
             case OK -> {
                 messages.send(player, "party.you-joined", Map.of("leader", leader.getName()));
+                sounds.play(player, "party-join");
                 Party party = parties.partyOf(player.getUniqueId());
                 if (party != null) {
                     notifyParty(party, player.getUniqueId(), "party.joined",

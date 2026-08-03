@@ -175,5 +175,37 @@ leaderboard:
   # siempre consulta la base de datos directamente.
   refresh-seconds: 60
 
+# Barra de accion (el texto encima de la hotbar).
+actionbar:
+  # Mientras esperas en cola te muestra el modo, cuanta gente falta y el
+  # tiempo que llevas esperando.
+  queue-enabled: true
+  # Cada cuantos ticks se actualiza (20 ticks = 1 segundo).
+  update-interval-ticks: 20
+  # Al ganar el MVP te avisa por la barra de accion y te dice cuantos llevas.
+  mvp-enabled: true
+  # Segundos que se queda el aviso del MVP.
+  mvp-seconds: 5
+
+# Sonidos. Formato: "nombre volumen tono" (volumen y tono son opcionales).
+# El tono va de 0.5 a 2.0. Pon "none" para quitar un sonido.
+# Lista de sonidos: https://minecraft.wiki/w/Sounds.json
+sounds:
+  enabled: true
+  queue-join: "entity.experience_orb.pickup 1.0 1.5"
+  queue-leave: "block.note_block.bass 1.0 0.8"
+  match-found: "block.anvil_land 0.6 1.6"
+  match-start: "entity.ender_dragon.growl 0.4 1.6"
+  goal: "entity.firework_rocket.blast 1.0 1.0"
+  victory: "ui.toast.challenge_complete 1.0 1.0"
+  defeat: "entity.villager.no 1.0 0.8"
+  draw: "block.note_block.bass 1.0 1.2"
+  mvp: "ui.toast.challenge_complete 1.0 1.4"
+  rank-up: "entity.player.levelup 1.0 1.0"
+  rank-down: "block.anvil_land 1.0 0.5"
+  error: "block.note_block.bass 1.0 0.5"
+  party-invite: "entity.experience_orb.pickup 1.0 1.8"
+  party-join: "entity.player.levelup 0.6 1.6"
+
 # Anuncia el resultado de las partidas ranked a todo el servidor.
 broadcast-results: false

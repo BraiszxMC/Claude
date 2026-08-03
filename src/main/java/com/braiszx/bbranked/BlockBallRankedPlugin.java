@@ -13,6 +13,7 @@ import com.braiszx.bbranked.match.MatchManager;
 import com.braiszx.bbranked.party.PartyManager;
 import com.braiszx.bbranked.queue.QueueManager;
 import com.braiszx.bbranked.util.Messages;
+import com.braiszx.bbranked.util.Sounds;
 import com.github.shynixn.blockball.contract.GameService;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
@@ -33,6 +34,7 @@ public final class BlockBallRankedPlugin extends JavaPlugin {
 
     private RankedConfig rankedConfig;
     private Messages messages;
+    private Sounds sounds;
     private StatsStorage storage;
     private StatsManager statsManager;
     private BanManager banManager;
@@ -55,6 +57,7 @@ public final class BlockBallRankedPlugin extends JavaPlugin {
 
         this.rankedConfig = new RankedConfig(this);
         this.messages = new Messages(this);
+        this.sounds = new Sounds(this);
 
         this.storage = new StatsStorage(this, rankedConfig);
         try {
@@ -70,9 +73,9 @@ public final class BlockBallRankedPlugin extends JavaPlugin {
         this.banManager.load();
         this.eloCalculator = new EloCalculator(rankedConfig);
         this.partyManager = new PartyManager(rankedConfig, statsManager);
-        this.matchManager = new MatchManager(this, rankedConfig, messages, statsManager, eloCalculator);
+        this.matchManager = new MatchManager(this, rankedConfig, messages, statsManager, eloCalculator, sounds);
         this.queueManager = new QueueManager(rankedConfig, messages, statsManager, matchManager,
-                banManager, partyManager);
+                banManager, partyManager, sounds);
 
         registerListeners();
         registerCommand();
@@ -125,7 +128,7 @@ public final class BlockBallRankedPlugin extends JavaPlugin {
             return;
         }
         RankedCommand executor = new RankedCommand(this, rankedConfig, messages, statsManager,
-                queueManager, matchManager, banManager, partyManager);
+                queueManager, matchManager, banManager, partyManager, sounds);
         command.setExecutor(executor);
         command.setTabCompleter(executor);
     }
@@ -149,6 +152,11 @@ public final class BlockBallRankedPlugin extends JavaPlugin {
         // Emparejamiento.
         long queueInterval = rankedConfig.queueCheckIntervalSeconds() * 20L;
         tasks.add(getServer().getScheduler().runTaskTimer(this, queueManager::tick, queueInterval, queueInterval));
+
+        // Barra de accion de la cola.
+        long actionbarInterval = rankedConfig.actionbarIntervalTicks();
+        tasks.add(getServer().getScheduler().runTaskTimer(this, queueManager::updateActionbars,
+                actionbarInterval, actionbarInterval));
 
         // Refresco del ranking.
         long leaderboardInterval = rankedConfig.leaderboardRefreshSeconds() * 20L;
@@ -184,6 +192,7 @@ public final class BlockBallRankedPlugin extends JavaPlugin {
     public void reloadEverything() {
         rankedConfig.reload();
         messages.reload();
+        sounds.reload();
         statsManager.refreshLeaderboard();
     }
 

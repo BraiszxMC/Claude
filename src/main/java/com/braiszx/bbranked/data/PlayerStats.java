@@ -15,6 +15,7 @@ public final class PlayerStats {
     private int losses;
     private int draws;
     private int goals;
+    private int mvps;
     private int leaves;
     private int winStreak;
     private int bestStreak;
@@ -93,6 +94,18 @@ public final class PlayerStats {
 
     public void addGoals(int amount) {
         this.goals += amount;
+    }
+
+    public int mvps() {
+        return mvps;
+    }
+
+    public void mvps(int mvps) {
+        this.mvps = mvps;
+    }
+
+    public void addMvp() {
+        this.mvps++;
     }
 
     public int leaves() {

@@ -25,6 +25,8 @@ Sistema de **partidas rankeds con Elo** montado encima del plugin
 | **Anti-multicuentas** | dos jugadores con la misma IP nunca coinciden en la misma partida |
 | **Baneos** | por jugador o por IP, temporales o permanentes, con persistencia |
 | **Parties** | hasta 3 amigos con Elo parecido entran juntos a la cola y juegan en el mismo equipo |
+| **Barra de accion** | mientras esperas te muestra el modo, cuanta gente falta y el tiempo |
+| **Sonidos** | cada evento (cola, gol, victoria, MVP, subir de rango...) con su sonido configurable |
 
 ---
 
@@ -76,6 +78,13 @@ Paquete `com.github.shynixn.blockball.event`:
    esas salidas parecian abandonos y sancionaban a los dos equipos. El
    listener comprueba `game.isDisposed()` para distinguir "la partida se esta
    cerrando" de "alguien se ha ido".
+
+   Y al reves: cuando la partida acaba **por abandono**, BlockBall no se entera
+   de nada (ni se ha llegado al marcador maximo ni se ha acabado el tiempo).
+   El plugin aplica el Elo pero la arena se queda en marcha con los que
+   quedan jugando solos, asi que hay que llamar a `close()` a mano. Por eso
+   `RankedMatch` lleva una marca `forfeited`: en un final normal no se toca la
+   arena, que ya se cierra sola con sus mensajes de victoria.
 2. Cuando una partida termina, BlockBall la **cierra y crea una instancia
    nueva** para la misma arena (`GameServiceImpl.runGames()` llama a
    `reload(arena)` en cuanto ve `isDisposed`). Por eso el plugin guarda la
@@ -345,7 +354,7 @@ Necesitan PlaceholderAPI:
 %bbranked_rank%         %bbranked_draws%      %bbranked_leaves%
 %bbranked_rank_id%      %bbranked_matches%    %bbranked_position%
 %bbranked_winrate%      %bbranked_goals%      %bbranked_in_queue%
-%bbranked_in_match%
+%bbranked_in_match%     %bbranked_mvps%
 %bbranked_top_name_1%   %bbranked_top_elo_1%   (1..N)
 ```
 
@@ -394,6 +403,29 @@ queue:
   range-expansion-per-second: 10  # se ensancha esperando
   max-range: 1000
 ```
+
+### Sonidos
+
+Cada evento tiene su sonido, configurable en `config.yml`:
+
+```yaml
+sounds:
+  enabled: true
+  queue-join: "entity.experience_orb.pickup 1.0 1.5"
+  match-found: "block.anvil_land 0.6 1.6"
+  victory: "ui.toast.challenge_complete 1.0 1.0"
+  mvp: "ui.toast.challenge_complete 1.0 1.4"
+  # ...
+```
+
+Formato: `"nombre volumen tono"` (volumen y tono opcionales, el tono va de 0.5
+a 2.0). Pon `"none"` para quitar uno. La lista completa de sonidos esta en la
+[wiki de Minecraft](https://minecraft.wiki/w/Sounds.json).
+
+> Se reproducen con la sobrecarga de `playSound` que acepta texto, no con el
+> enum `org.bukkit.Sound`. Ese enum cambia entre versiones de Minecraft y
+> habria que recompilar el plugin cada vez; con texto, poner un sonido que no
+> existe simplemente no suena en vez de romper nada.
 
 Los mensajes estan en `messages.yml` en formato
 [MiniMessage](https://docs.advntr.dev/minimessage/format.html).

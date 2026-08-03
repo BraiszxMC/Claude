@@ -10,6 +10,7 @@ import com.braiszx.bbranked.elo.EloChange;
 import com.braiszx.bbranked.elo.EloCalculator;
 import com.braiszx.bbranked.elo.MatchWinner;
 import com.braiszx.bbranked.util.Messages;
+import com.braiszx.bbranked.util.Sounds;
 import com.github.shynixn.blockball.contract.GameService;
 import com.github.shynixn.blockball.contract.SoccerGame;
 import com.github.shynixn.blockball.enumeration.GameState;
@@ -46,6 +47,7 @@ public final class MatchManager {
     private final Messages messages;
     private final StatsManager stats;
     private final EloCalculator elo;
+    private final Sounds sounds;
 
     /** Partidas vivas, por id. */
     private final Map<UUID, RankedMatch> matches = new ConcurrentHashMap<>();
@@ -59,12 +61,13 @@ public final class MatchManager {
     private final Set<UUID> authorizedJoins = ConcurrentHashMap.newKeySet();
 
     public MatchManager(BlockBallRankedPlugin plugin, RankedConfig config, Messages messages,
-                        StatsManager stats, EloCalculator elo) {
+                        StatsManager stats, EloCalculator elo, Sounds sounds) {
         this.plugin = plugin;
         this.config = config;
         this.messages = messages;
         this.stats = stats;
         this.elo = elo;
+        this.sounds = sounds;
     }
 
     // ------------------------------------------------------------------
@@ -301,6 +304,7 @@ public final class MatchManager {
             Map<String, String> placeholders = Map.of("arena", arenaName, "mode", mode.displayName());
             for (Player player : players) {
                 messages.send(player, "match.found", placeholders);
+                sounds.play(player, "match-found");
             }
             sendMatchupComparison(match);
         });
@@ -359,7 +363,8 @@ public final class MatchManager {
             messages.sendRaw(player, "matchup.line-self", Map.of(
                     "player", own.name(),
                     "elo", String.valueOf(own.elo()),
-                    "rank", ownRank.displayName()));
+                    "rank", ownRank.displayName(),
+                    "ping", pingOf(uuid)));
             for (UUID allyUuid : allies) {
                 if (!allyUuid.equals(uuid)) {
                     sendMatchupLine(player, "matchup.line", allyUuid);
@@ -378,7 +383,37 @@ public final class MatchManager {
         messages.sendRaw(to, key, Map.of(
                 "player", subjectStats.name(),
                 "elo", String.valueOf(subjectStats.elo()),
-                "rank", config.rankOf(subjectStats.elo()).displayName()));
+                "rank", config.rankOf(subjectStats.elo()).displayName(),
+                "ping", pingOf(subject)));
+    }
+
+    /**
+     * Aviso de MVP en la barra de accion. Se repite unos segundos para que no
+     * se lo coman los mensajes del resultado.
+     */
+    private void showMvpActionbar(Player player, int totalMvps) {
+        if (!config.actionbarMvpEnabled()) {
+            return;
+        }
+        Component text = messages.raw("actionbar.mvp", Map.of("mvps", String.valueOf(totalMvps)));
+        UUID uuid = player.getUniqueId();
+
+        for (int second = 0; second < config.actionbarMvpSeconds(); second++) {
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                Player online = Bukkit.getPlayer(uuid);
+                if (online != null) {
+                    online.sendActionBar(text);
+                }
+            }, second * 20L);
+        }
+    }
+
+    /**
+     * Ping del jugador en milisegundos, o "?" si ya no esta conectado.
+     */
+    private String pingOf(UUID uuid) {
+        Player player = Bukkit.getPlayer(uuid);
+        return player == null ? "?" : String.valueOf(player.getPing());
     }
 
     /**
@@ -405,6 +440,7 @@ public final class MatchManager {
             match.started(true);
             broadcast(match, messages.get("match.starting",
                     Map.of("mode", match.mode().displayName())));
+            sounds.play(match.allPlayers(), "match-start");
         }
     }
 
@@ -414,6 +450,7 @@ public final class MatchManager {
             return;
         }
         match.addGoal(scorer.getUniqueId());
+        sounds.play(match.allPlayers(), "goal");
     }
 
     public void onGameEnd(SoccerGame game, Team winningTeam) {
@@ -450,6 +487,11 @@ public final class MatchManager {
         if (config.forfeitOnLeave()) {
             Team team = match.teamOf(uuid);
             match.pendingWinner(team == Team.RED ? MatchWinner.BLUE : MatchWinner.RED);
+            // BlockBall no sabe que la partida ha terminado: el marcador no ha
+            // llegado al maximo ni se ha acabado el tiempo. Si no se marca
+            // como forfeit, se aplica el Elo pero los que quedan se quedan
+            // jugando solos en la arena para siempre.
+            match.forfeited(true);
         }
     }
 
@@ -551,7 +593,9 @@ public final class MatchManager {
             List<EloChange> adjusted = new ArrayList<>(changes.size());
             for (EloChange change : changes) {
                 if (mvps.contains(change.uuid())) {
-                    adjusted.add(elo.applyMvpBonus(stats.require(change.uuid()), change, config.mvpBonus()));
+                    PlayerStats mvpStats = stats.require(change.uuid());
+                    mvpStats.addMvp();
+                    adjusted.add(elo.applyMvpBonus(mvpStats, change, config.mvpBonus()));
                 } else {
                     adjusted.add(change);
                 }
@@ -578,6 +622,24 @@ public final class MatchManager {
         // poco en reiniciarse.
         for (UUID uuid : match.allPlayers()) {
             byPlayer.remove(uuid);
+        }
+
+        // Cuando la partida acaba por abandono, BlockBall sigue creyendo que
+        // esta en juego: hay que cerrarle la arena o los que quedan se quedan
+        // dentro jugando. En un final normal no se toca, que ya se cierra sola
+        // pasados unos segundos con sus mensajes de victoria.
+        if (match.forfeited()) {
+            SoccerGame game = games.get(match.id());
+            if (game != null && !game.isDisposed()) {
+                offPrimaryThread(() -> {
+                    try {
+                        game.close();
+                    } catch (RuntimeException exception) {
+                        plugin.getLogger().warning("Error cerrando la arena " + match.arenaName()
+                                + " tras un abandono: " + exception.getMessage());
+                    }
+                });
+            }
         }
     }
 
@@ -630,6 +692,7 @@ public final class MatchManager {
         String outcomeKey = change.outcome() > 0 ? "result.win"
                 : change.outcome() < 0 ? "result.loss" : "result.draw";
         messages.sendRaw(player, outcomeKey);
+        sounds.play(player, change.outcome() > 0 ? "victory" : change.outcome() < 0 ? "defeat" : "draw");
 
         int delta = change.delta();
         if (delta > 0) {
@@ -648,9 +711,13 @@ public final class MatchManager {
 
         if (!mvps.isEmpty()) {
             if (mvps.contains(change.uuid())) {
+                int total = stats.require(change.uuid()).mvps();
                 messages.sendRaw(player, "result.mvp-self", Map.of(
                         "goals", String.valueOf(mvpGoals),
-                        "bonus", String.valueOf(config.mvpBonus())));
+                        "bonus", String.valueOf(config.mvpBonus()),
+                        "mvps", String.valueOf(total)));
+                sounds.play(player, "mvp");
+                showMvpActionbar(player, total);
             } else {
                 messages.sendRaw(player, "result.mvp-other", Map.of(
                         "players", names(new ArrayList<>(mvps)),
@@ -660,8 +727,10 @@ public final class MatchManager {
 
         RankTier newRank = config.rankOf(change.after());
         if (previousRank != null && !newRank.id().equals(previousRank.id())) {
-            String key = newRank.minElo() > previousRank.minElo() ? "result.rank-up" : "result.rank-down";
-            messages.sendRaw(player, key, Map.of("rank", newRank.displayName()));
+            boolean promoted = newRank.minElo() > previousRank.minElo();
+            messages.sendRaw(player, promoted ? "result.rank-up" : "result.rank-down",
+                    Map.of("rank", newRank.displayName()));
+            sounds.play(player, promoted ? "rank-up" : "rank-down");
         }
 
         messages.sendRaw(player, "result.footer");

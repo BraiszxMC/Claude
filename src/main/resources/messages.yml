@@ -39,9 +39,14 @@ matchup:
   rivals-title: "<red>Rivales:"
   you-title: "<green>Tu:"
   team-title: "<green>Tu equipo:"
-  line: "<gray>  <white>{player}</white> <gray>- <white>{elo}</white> Elo <gray>(<reset>{rank}<gray>)"
-  line-self: "<gray>  <yellow>{player}</yellow> <gray>- <white>{elo}</white> Elo <gray>(<reset>{rank}<gray>)"
+  line: "<gray>  <white>{player}</white> <gray>- <white>{elo}</white> Elo <gray>(<reset>{rank}<gray>) <dark_gray>| <gray>{ping}ms"
+  line-self: "<gray>  <yellow>{player}</yellow> <gray>- <white>{elo}</white> Elo <gray>(<reset>{rank}<gray>) <dark_gray>| <gray>{ping}ms"
   footer: "<gray>--------------------------------"
+
+# Texto de la barra de accion (encima de la hotbar).
+actionbar:
+  queue: "<gray>En cola <white>{mode}</white> <dark_gray>| <yellow>{current}<gray>/<yellow>{needed}</yellow> <dark_gray>| <gray>{time}"
+  mvp: "<gold><bold>MVP DE LA PARTIDA!</bold></gold> <gray>Llevas <yellow>{mvps}</yellow>"
 
 party:
   disabled: "<red>Las parties estan desactivadas en este servidor."
@@ -86,7 +91,7 @@ result:
   elo-same: "<gray>Elo: <white>{new}</white> <gray>(sin cambios)"
   rank-up: "<green>Has subido a <reset>{rank}</reset><green>!"
   rank-down: "<red>Has bajado a <reset>{rank}</reset><red>."
-  mvp-self: "<gold><bold>MVP!</bold></gold> <gray>Maximo goleador (<white>{goals}</white>): <green>+{bonus}</green> Elo extra."
+  mvp-self: "<gold><bold>MVP!</bold></gold> <gray>Maximo goleador (<white>{goals}</white>): <green>+{bonus}</green> Elo extra. <gray>Total: <yellow>{mvps}</yellow>"
   mvp-other: "<gray>MVP de la partida: <gold>{players}</gold> <gray>(<white>{goals}</white> goles)"
   footer: "<gray>--------------------------------"
   broadcast: "<gray>[Ranked] <white>{winners}</white> <gray>han ganado a <white>{losers}</white> <gray>({red}-{blue}) en <white>{mode}</white>."
@@ -96,7 +101,7 @@ stats:
   rank: "<gray>Division: <reset>{rank}"
   elo: "<gray>Elo: <white>{elo}</white> <gray>(pico: <white>{peak}</white>)"
   record: "<gray>V/D/E: <green>{wins}</green><gray>/<red>{losses}</red><gray>/<yellow>{draws}</yellow> <gray>(<white>{winrate}%</white>)"
-  matches: "<gray>Partidas: <white>{matches}</white> <gray>| Goles: <white>{goals}</white>"
+  matches: "<gray>Partidas: <white>{matches}</white> <gray>| Goles: <white>{goals}</white> <gray>| MVPs: <gold>{mvps}</gold>"
   streak: "<gray>Racha: <white>{streak}</white> <gray>(mejor: <white>{best}</white>)"
   leaves: "<gray>Abandonos: <white>{leaves}</white>"
   placements: "<yellow>Colocacion: faltan <white>{remaining}</white> partidas."

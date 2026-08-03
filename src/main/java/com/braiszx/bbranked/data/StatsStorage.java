@@ -143,6 +143,24 @@ public final class StatsStorage implements AutoCloseable {
             statement.executeUpdate(
                     "CREATE INDEX IF NOT EXISTS idx_" + playersTable + "_elo ON " + playersTable + " (elo)");
         }
+
+        // Columnas anadidas despues de la primera version. Para una tabla que
+        // ya existe hay que anadirlas a mano.
+        addColumnIfMissing(playersTable, "mvps", "INT NOT NULL DEFAULT 0");
+    }
+
+    /**
+     * Anade una columna si no estaba. Si ya existe, la base de datos protesta
+     * y se ignora: es la forma portable de migrar entre SQLite y MySQL sin
+     * tener que leer el esquema de cada uno.
+     */
+    private void addColumnIfMissing(String table, String column, String definition) {
+        try (Statement statement = connection().createStatement()) {
+            statement.executeUpdate("ALTER TABLE " + table + " ADD COLUMN " + column + " " + definition);
+            plugin.getLogger().info("Base de datos actualizada: columna '" + column + "' anadida.");
+        } catch (SQLException ignored) {
+            // La columna ya existia.
+        }
     }
 
     // ------------------------------------------------------------------
@@ -394,24 +412,31 @@ public final class StatsStorage implements AutoCloseable {
         // UPDATE y si no existia INSERT: portable entre SQLite y MySQL sin
         // tener que escribir dos dialectos de upsert.
         String update = "UPDATE " + playersTable + " SET name = ?, elo = ?, peak_elo = ?, wins = ?, losses = ?,"
-                + " draws = ?, goals = ?, leaves = ?, win_streak = ?, best_streak = ?, last_seen = ?"
+                + " draws = ?, goals = ?, leaves = ?, win_streak = ?, best_streak = ?, last_seen = ?, mvps = ?"
                 + " WHERE uuid = ?";
         try (PreparedStatement statement = connection().prepareStatement(update)) {
             bindStats(statement, stats);
-            statement.setString(12, stats.uuid().toString());
+            statement.setString(UUID_PARAMETER, stats.uuid().toString());
             if (statement.executeUpdate() > 0) {
                 return;
             }
         }
 
         String insert = "INSERT INTO " + playersTable + " (name, elo, peak_elo, wins, losses, draws, goals,"
-                + " leaves, win_streak, best_streak, last_seen, uuid) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                + " leaves, win_streak, best_streak, last_seen, mvps, uuid)"
+                + " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (PreparedStatement statement = connection().prepareStatement(insert)) {
             bindStats(statement, stats);
-            statement.setString(12, stats.uuid().toString());
+            statement.setString(UUID_PARAMETER, stats.uuid().toString());
             statement.executeUpdate();
         }
     }
+
+    /**
+     * Los dos SQL de arriba ponen el uuid al final, justo despues de las
+     * columnas que enlaza {@link #bindStats}.
+     */
+    private static final int UUID_PARAMETER = 13;
 
     private void bindStats(PreparedStatement statement, PlayerStats stats) throws SQLException {
         statement.setString(1, stats.name());
@@ -425,6 +450,7 @@ public final class StatsStorage implements AutoCloseable {
         statement.setInt(9, stats.winStreak());
         statement.setInt(10, stats.bestStreak());
         statement.setLong(11, stats.lastSeen());
+        statement.setInt(12, stats.mvps());
     }
 
     private PlayerStats read(ResultSet result) throws SQLException {
@@ -437,6 +463,7 @@ public final class StatsStorage implements AutoCloseable {
         stats.losses(result.getInt("losses"));
         stats.draws(result.getInt("draws"));
         stats.goals(result.getInt("goals"));
+        stats.mvps(result.getInt("mvps"));
         stats.leaves(result.getInt("leaves"));
         stats.bestStreak(result.getInt("best_streak"));
         stats.winStreak(result.getInt("win_streak"));

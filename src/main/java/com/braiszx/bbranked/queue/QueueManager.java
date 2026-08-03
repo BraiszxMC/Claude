@@ -9,6 +9,8 @@ import com.braiszx.bbranked.match.MatchManager;
 import com.braiszx.bbranked.party.Party;
 import com.braiszx.bbranked.party.PartyManager;
 import com.braiszx.bbranked.util.Messages;
+import com.braiszx.bbranked.util.Sounds;
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
@@ -36,6 +38,7 @@ public final class QueueManager {
     private final MatchManager matches;
     private final BanManager bans;
     private final PartyManager parties;
+    private final Sounds sounds;
 
     /** modo -> tickets en cola, en orden de llegada. */
     private final Map<String, List<QueueTicket>> queues = new ConcurrentHashMap<>();
@@ -45,13 +48,14 @@ public final class QueueManager {
     private final Map<UUID, Long> penalties = new ConcurrentHashMap<>();
 
     public QueueManager(RankedConfig config, Messages messages, StatsManager stats, MatchManager matches,
-                        BanManager bans, PartyManager parties) {
+                        BanManager bans, PartyManager parties, Sounds sounds) {
         this.config = config;
         this.messages = messages;
         this.stats = stats;
         this.matches = matches;
         this.bans = bans;
         this.parties = parties;
+        this.sounds = sounds;
     }
 
     // ------------------------------------------------------------------
@@ -99,6 +103,7 @@ public final class QueueManager {
                 "current", String.valueOf(queuedPlayers(mode)),
                 "needed", String.valueOf(mode.requiredPlayers())));
 
+        sounds.play(player, "queue-join");
         warnIfNoArena(player, mode);
         tryMatch(mode);
         return true;
@@ -146,6 +151,7 @@ public final class QueueManager {
                 "size", String.valueOf(party.size()));
         for (Player memberPlayer : online) {
             messages.send(memberPlayer, "party.queued", placeholders);
+            sounds.play(memberPlayer, "queue-join");
         }
 
         warnIfNoArena(leader, mode);
@@ -213,6 +219,7 @@ public final class QueueManager {
 
         if (notify) {
             messages.send(player, removed ? "queue.left" : "queue.not-in-queue");
+            sounds.play(player, removed ? "queue-leave" : "error");
         }
         // Si se sale un miembro de una party encolada, la party entera sale.
         if (removed && ticket != null && ticket.isParty()) {
@@ -358,6 +365,51 @@ public final class QueueManager {
     // ------------------------------------------------------------------
     //  Emparejamiento
     // ------------------------------------------------------------------
+
+    /**
+     * Refresca la barra de accion de todos los que estan esperando en cola.
+     * Se llama mas a menudo que {@link #tick()}, solo pinta texto.
+     */
+    public void updateActionbars() {
+        if (!config.actionbarQueueEnabled()) {
+            return;
+        }
+
+        for (QueueMode mode : config.modes().values()) {
+            List<QueueTicket> queue = queues.get(mode.id());
+            if (queue == null) {
+                continue;
+            }
+
+            List<QueueTicket> snapshot;
+            synchronized (queue) {
+                if (queue.isEmpty()) {
+                    continue;
+                }
+                snapshot = new ArrayList<>(queue);
+            }
+
+            int current = queuedPlayers(mode);
+            for (QueueTicket ticket : snapshot) {
+                Component text = messages.raw("actionbar.queue", Map.of(
+                        "mode", mode.displayName(),
+                        "current", String.valueOf(current),
+                        "needed", String.valueOf(mode.requiredPlayers()),
+                        "time", formatWait(ticket.waitedSeconds())));
+
+                for (UUID uuid : ticket.uuids()) {
+                    Player player = Bukkit.getPlayer(uuid);
+                    if (player != null) {
+                        player.sendActionBar(text);
+                    }
+                }
+            }
+        }
+    }
+
+    private static String formatWait(long seconds) {
+        return String.format("%d:%02d", seconds / 60, seconds % 60);
+    }
 
     /**
      * Se llama periodicamente desde el hilo principal.

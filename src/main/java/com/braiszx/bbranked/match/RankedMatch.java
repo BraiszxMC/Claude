@@ -29,6 +29,7 @@ public final class RankedMatch {
 
     private boolean started;
     private boolean settled;
+    private boolean forfeited;
     private MatchWinner pendingWinner;
     private int redScore;
     private int blueScore;
@@ -99,6 +100,18 @@ public final class RankedMatch {
 
     public void settled(boolean settled) {
         this.settled = settled;
+    }
+
+    /**
+     * True si la partida acabo por abandono. En ese caso BlockBall no sabe
+     * que ha terminado y hay que cerrarle la arena a mano.
+     */
+    public boolean forfeited() {
+        return forfeited;
+    }
+
+    public void forfeited(boolean forfeited) {
+        this.forfeited = forfeited;
     }
 
     public MatchWinner pendingWinner() {

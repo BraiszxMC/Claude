@@ -76,6 +76,12 @@ public final class RankedConfig {
 
     private boolean broadcastResults;
 
+    // --- barra de accion ---
+    private boolean actionbarQueueEnabled;
+    private int actionbarIntervalTicks;
+    private boolean actionbarMvpEnabled;
+    private int actionbarMvpSeconds;
+
     private Map<String, QueueMode> modes = Collections.emptyMap();
     private List<RankTier> ranks = Collections.emptyList();
 
@@ -140,6 +146,11 @@ public final class RankedConfig {
         leaderboardRefreshSeconds = Math.max(5, c.getInt("leaderboard.refresh-seconds", 60));
 
         broadcastResults = c.getBoolean("broadcast-results", false);
+
+        actionbarQueueEnabled = c.getBoolean("actionbar.queue-enabled", true);
+        actionbarIntervalTicks = Math.max(5, c.getInt("actionbar.update-interval-ticks", 20));
+        actionbarMvpEnabled = c.getBoolean("actionbar.mvp-enabled", true);
+        actionbarMvpSeconds = Math.max(1, c.getInt("actionbar.mvp-seconds", 5));
 
         this.modes = loadModes(c);
         this.ranks = loadRanks(c);
@@ -396,5 +407,21 @@ public final class RankedConfig {
 
     public boolean broadcastResults() {
         return broadcastResults;
+    }
+
+    public boolean actionbarQueueEnabled() {
+        return actionbarQueueEnabled;
+    }
+
+    public int actionbarIntervalTicks() {
+        return actionbarIntervalTicks;
+    }
+
+    public boolean actionbarMvpEnabled() {
+        return actionbarMvpEnabled;
+    }
+
+    public int actionbarMvpSeconds() {
+        return actionbarMvpSeconds;
     }
 }
