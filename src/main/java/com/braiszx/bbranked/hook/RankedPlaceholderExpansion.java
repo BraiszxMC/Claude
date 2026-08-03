@@ -2,7 +2,8 @@ package com.braiszx.bbranked.hook;
 
 import com.braiszx.bbranked.BlockBallRankedPlugin;
 import com.braiszx.bbranked.config.RankedConfig;
-import com.braiszx.bbranked.data.LeaderboardEntry;
+import com.braiszx.bbranked.data.LeaderboardType;
+import com.braiszx.bbranked.data.TopEntry;
 import com.braiszx.bbranked.data.PlayerStats;
 import com.braiszx.bbranked.data.StatsManager;
 import com.braiszx.bbranked.queue.QueueManager;
@@ -33,9 +34,29 @@ import java.util.Locale;
  *   <li>%bbranked_position%     posicion en el ranking</li>
  *   <li>%bbranked_in_queue%     si/no</li>
  *   <li>%bbranked_in_match%     si/no</li>
- *   <li>%bbranked_top_name_N%   nombre del puesto N</li>
- *   <li>%bbranked_top_elo_N%    Elo del puesto N</li>
  * </ul>
+ *
+ * <p>Tablas de clasificacion, con el formato
+ * {@code %bbranked_top_<tabla>_<name|value>_<puesto>%}:</p>
+ *
+ * <pre>
+ *   %bbranked_top_elo_name_1%       %bbranked_top_elo_value_1%
+ *   %bbranked_top_goals_name_1%     %bbranked_top_goals_value_1%
+ *   %bbranked_top_wins_name_1%      %bbranked_top_wins_value_1%
+ *   %bbranked_top_mvps_name_1%      %bbranked_top_mvps_value_1%
+ *   %bbranked_top_matches_name_1%   %bbranked_top_matches_value_1%
+ *   %bbranked_top_winrate_name_1%   %bbranked_top_winrate_value_1%
+ *   %bbranked_top_streak_name_1%    %bbranked_top_peak_value_1%
+ *   %bbranked_top_losses_...%       %bbranked_top_draws_...%
+ *   %bbranked_top_leaves_...%
+ * </pre>
+ *
+ * <p>Y el puesto propio en cada tabla con
+ * {@code %bbranked_position_<tabla>%}, por ejemplo
+ * {@code %bbranked_position_goals%}.</p>
+ *
+ * <p>Se mantienen {@code %bbranked_top_name_N%} y
+ * {@code %bbranked_top_elo_N%} por compatibilidad: apuntan a la tabla de Elo.</p>
  */
 public final class RankedPlaceholderExpansion extends PlaceholderExpansion {
 
@@ -78,12 +99,22 @@ public final class RankedPlaceholderExpansion extends PlaceholderExpansion {
     public String onRequest(OfflinePlayer player, @NotNull String params) {
         String key = params.toLowerCase(Locale.ROOT);
 
-        if (key.startsWith("top_name_") || key.startsWith("top_elo_")) {
+        if (key.startsWith("top_")) {
             return topPlaceholder(key);
         }
 
         if (player == null) {
             return "";
+        }
+
+        // %bbranked_position_goals%, %bbranked_position_mvps%...
+        if (key.startsWith("position_")) {
+            LeaderboardType type = LeaderboardType.byId(key.substring("position_".length()));
+            if (type == null) {
+                return null;
+            }
+            int position = stats.positionIn(type, player.getUniqueId());
+            return position > 0 ? String.valueOf(position) : "-";
         }
 
         PlayerStats found = stats.cached(player.getUniqueId());
@@ -127,10 +158,41 @@ public final class RankedPlaceholderExpansion extends PlaceholderExpansion {
         };
     }
 
+    /**
+     * Resuelve los placeholders de tablas.
+     *
+     * <p>Formato general: {@code top_<tabla>_<name|value>_<puesto>}, por
+     * ejemplo {@code top_goals_name_1}. Se mantienen tambien los antiguos
+     * {@code top_name_N} y {@code top_elo_N}, que apuntan a la tabla de Elo.</p>
+     */
     private String topPlaceholder(String key) {
-        boolean wantsName = key.startsWith("top_name_");
-        String rawIndex = key.substring(wantsName ? "top_name_".length() : "top_elo_".length());
+        String rest = key.substring("top_".length());
 
+        // Formato antiguo: top_name_N y top_elo_N.
+        if (rest.startsWith("name_")) {
+            return topValue(LeaderboardType.ELO, rest.substring("name_".length()), true);
+        }
+        if (rest.startsWith("elo_") && isNumber(rest.substring("elo_".length()))) {
+            return topValue(LeaderboardType.ELO, rest.substring("elo_".length()), false);
+        }
+
+        int nameAt = rest.lastIndexOf("_name_");
+        int valueAt = rest.lastIndexOf("_value_");
+        boolean wantsName = nameAt >= 0;
+        int split = wantsName ? nameAt : valueAt;
+        if (split < 0) {
+            return null;
+        }
+
+        LeaderboardType type = LeaderboardType.byId(rest.substring(0, split));
+        if (type == null) {
+            return null;
+        }
+        String rawIndex = rest.substring(split + (wantsName ? "_name_".length() : "_value_".length()));
+        return topValue(type, rawIndex, wantsName);
+    }
+
+    private String topValue(LeaderboardType type, String rawIndex, boolean wantsName) {
         int index;
         try {
             index = Integer.parseInt(rawIndex);
@@ -138,12 +200,21 @@ public final class RankedPlaceholderExpansion extends PlaceholderExpansion {
             return "";
         }
 
-        List<LeaderboardEntry> entries = stats.leaderboard();
+        List<TopEntry> entries = stats.top(type);
         if (index < 1 || index > entries.size()) {
             return wantsName ? "-" : "0";
         }
-        LeaderboardEntry entry = entries.get(index - 1);
-        return wantsName ? entry.name() : String.valueOf(entry.elo());
+        TopEntry entry = entries.get(index - 1);
+        return wantsName ? entry.name() : entry.display(type);
+    }
+
+    private static boolean isNumber(String value) {
+        try {
+            Integer.parseInt(value);
+            return true;
+        } catch (NumberFormatException exception) {
+            return false;
+        }
     }
 
     /**

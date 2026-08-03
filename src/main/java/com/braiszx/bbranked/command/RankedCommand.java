@@ -7,6 +7,8 @@ import com.braiszx.bbranked.config.QueueMode;
 import com.braiszx.bbranked.config.RankTier;
 import com.braiszx.bbranked.config.RankedConfig;
 import com.braiszx.bbranked.data.LeaderboardEntry;
+import com.braiszx.bbranked.data.LeaderboardType;
+import com.braiszx.bbranked.data.TopEntry;
 import com.braiszx.bbranked.data.MatchRecord;
 import com.braiszx.bbranked.data.PlayerStats;
 import com.braiszx.bbranked.data.StatsManager;
@@ -21,6 +23,7 @@ import com.braiszx.bbranked.season.Season;
 import com.braiszx.bbranked.season.SeasonManager;
 import com.braiszx.bbranked.util.Messages;
 import com.braiszx.bbranked.util.Sounds;
+import com.braiszx.bbranked.hook.DiscordEmbed;
 import com.braiszx.bbranked.hook.DiscordWebhook;
 import com.github.shynixn.blockball.contract.SoccerGame;
 import net.kyori.adventure.text.Component;
@@ -39,6 +42,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.StringJoiner;
 import java.util.UUID;
 
 /**
@@ -234,12 +238,27 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
+        // /ranked top [tabla] [pagina] - los dos argumentos son opcionales y
+        // se distinguen por si son numero o no.
+        LeaderboardType type = LeaderboardType.ELO;
+        int pageArg = 1;
+
+        if (args.length >= 2 && !isNumber(args[1])) {
+            type = LeaderboardType.byId(args[1]);
+            if (type == null) {
+                messages.send(sender, "top.unknown-type", Map.of(
+                        "type", args[1], "types", allTypeIds()));
+                return;
+            }
+            pageArg = 2;
+        }
+
         int page = 1;
-        if (args.length >= 2) {
+        if (args.length > pageArg) {
             try {
-                page = Math.max(1, Integer.parseInt(args[1]));
+                page = Math.max(1, Integer.parseInt(args[pageArg]));
             } catch (NumberFormatException exception) {
-                messages.send(sender, "invalid-number", Map.of("input", args[1]));
+                messages.send(sender, "invalid-number", Map.of("input", args[pageArg]));
                 return;
             }
         }
@@ -248,12 +267,13 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
         // la cache se rellena de forma asincrona y el primer /ranked top tras
         // arrancar la encontraba vacia, asi que no salia nadie en el ranking.
         int requestedPage = page;
-        stats.storage().topPlayers(config.leaderboardPageSize() * 20, config.leaderboardMinMatches())
+        LeaderboardType requestedType = type;
+        stats.storage().topBy(type, config.leaderboardPageSize() * 20, config.leaderboardMinMatches())
                 .thenAccept(entries -> Bukkit.getScheduler().runTask(plugin,
-                        () -> renderTop(sender, entries, requestedPage)));
+                        () -> renderTop(sender, requestedType, entries, requestedPage)));
     }
 
-    private void renderTop(CommandSender sender, List<LeaderboardEntry> entries, int page) {
+    private void renderTop(CommandSender sender, LeaderboardType type, List<TopEntry> entries, int page) {
         if (entries.isEmpty()) {
             messages.sendRaw(sender, "top.empty");
             return;
@@ -266,16 +286,26 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
         int to = Math.min(from + pageSize, entries.size());
 
         messages.sendRaw(sender, "top.header", Map.of(
+                "type", type.displayName(),
                 "page", String.valueOf(page),
                 "pages", String.valueOf(pages)));
+
         for (int i = from; i < to; i++) {
-            LeaderboardEntry entry = entries.get(i);
+            TopEntry entry = entries.get(i);
             messages.sendRaw(sender, "top.line", Map.of(
                     "position", String.valueOf(i + 1),
                     "player", entry.name(),
-                    "elo", String.valueOf(entry.elo()),
-                    "rank", config.rankOf(entry.elo()).displayName()));
+                    "value", entry.display(type),
+                    "type", type.displayName()));
         }
+    }
+
+    private static String allTypeIds() {
+        StringJoiner joiner = new StringJoiner(", ");
+        for (LeaderboardType type : LeaderboardType.values()) {
+            joiner.add(type.id());
+        }
+        return joiner.toString();
     }
 
     private void handleQueues(CommandSender sender) {
@@ -560,15 +590,17 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
                     ? String.join(" ", List.of(args).subList(2, args.length))
                     : "Temporada " + (seasons.current() == null ? 2 : seasons.current().id() + 1);
 
+            String closingName = seasons.current() == null ? "?" : seasons.current().name();
             messages.send(sender, "season.closing");
-            seasons.closeSeason(nextName, result -> {
+
+            seasons.closeSeason(nextName, (result, ranking) -> {
                 messages.send(sender, "season.closed", Map.of("result", result));
                 for (Player online : Bukkit.getOnlinePlayers()) {
                     messages.send(online, "season.reset-notice");
                     sounds.play(online, "rank-up");
                 }
-                if (config.discordSeasonEnd()) {
-                    plugin.discord().send("Fin de temporada", result, DiscordWebhook.COLOR_GOLD);
+                if (config.discordSeasonEnd() && !ranking.isEmpty()) {
+                    sendSeasonEndToDiscord(closingName, nextName, ranking);
                 }
             });
             return;
@@ -582,6 +614,57 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
         messages.sendRaw(sender, "season.info-header");
         messages.sendRaw(sender, "season.info-name", Map.of("name", season.name()));
         messages.sendRaw(sender, "season.info-days", Map.of("days", String.valueOf(season.daysRunning())));
+    }
+
+    /**
+     * Resumen de fin de temporada para Discord: podio, numero de jugadores y
+     * el mejor de cada estadistica.
+     */
+    private void sendSeasonEndToDiscord(String closedName, String nextName,
+                                        List<LeaderboardEntry> ranking) {
+        StringBuilder podium = new StringBuilder();
+        String[] medals = {"🥇", "🥈", "🥉"};
+        for (int i = 0; i < Math.min(3, ranking.size()); i++) {
+            LeaderboardEntry entry = ranking.get(i);
+            podium.append(medals[i]).append(" **").append(entry.name()).append("** — ")
+                    .append(entry.elo()).append(" Elo (")
+                    .append(entry.wins()).append("V/").append(entry.losses()).append("D)\n");
+        }
+
+        StringBuilder rest = new StringBuilder();
+        for (int i = 3; i < Math.min(10, ranking.size()); i++) {
+            LeaderboardEntry entry = ranking.get(i);
+            rest.append("`").append(i + 1).append(".` ").append(entry.name())
+                    .append(" — ").append(entry.elo()).append('\n');
+        }
+
+        DiscordEmbed embed = new DiscordEmbed()
+                .author("Fin de temporada")
+                .title("🏆 " + closedName)
+                .description(podium.toString())
+                .color(DiscordWebhook.COLOR_GOLD)
+                .playerHead(ranking.get(0).name())
+                .field("Resto del top 10", rest.toString(), false)
+                .field("Jugadores", String.valueOf(ranking.size()), true)
+                .field("Nueva temporada", nextName, true)
+                .footer("El Elo se ha ajustado hacia " + config.seasonResetTarget()
+                        + " (factor " + config.seasonResetFactor() + ")")
+                .withTimestamp();
+
+        // Mejores de cada tabla, para que no todo gire alrededor del Elo.
+        addSeasonLeader(embed, LeaderboardType.GOALS, "⚽ Maximo goleador");
+        addSeasonLeader(embed, LeaderboardType.MVPS, "⭐ Mas MVPs");
+        addSeasonLeader(embed, LeaderboardType.WINS, "🏅 Mas victorias");
+
+        plugin.discord().send(embed);
+    }
+
+    private void addSeasonLeader(DiscordEmbed embed, LeaderboardType type, String label) {
+        List<TopEntry> top = stats.top(type);
+        if (!top.isEmpty() && top.get(0).value() > 0) {
+            TopEntry best = top.get(0);
+            embed.field(label, best.name() + " (" + best.display(type) + ")", true);
+        }
     }
 
     // ------------------------------------------------------------------
@@ -1041,6 +1124,11 @@ public final class RankedCommand implements CommandExecutor, TabCompleter {
         } else if (args.length == 2) {
             switch (args[0].toLowerCase(Locale.ROOT)) {
                 case "join", "entrar" -> options.addAll(config.modes().keySet());
+                case "top", "ranking" -> {
+                    for (LeaderboardType type : LeaderboardType.values()) {
+                        options.add(type.id());
+                    }
+                }
                 case "party", "grupo" ->
                         options.addAll(List.of("invite", "accept", "deny", "kick", "leave", "disband", "info"));
                 case "unpenalize", "despenalizar" -> {

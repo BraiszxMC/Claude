@@ -40,17 +40,20 @@ public final class DiscordWebhook {
      * Manda un embed simple.
      */
     public void send(String title, String description, int color) {
+        send(new DiscordEmbed().title(title).description(description).color(color).withTimestamp());
+    }
+
+    /**
+     * Manda un embed ya construido.
+     */
+    public void send(DiscordEmbed embed) {
         if (!config.discordEnabled()) {
             return;
         }
 
         String payload = "{"
                 + "\"username\":\"" + escape(config.discordUsername()) + "\","
-                + "\"embeds\":[{"
-                + "\"title\":\"" + escape(title) + "\","
-                + "\"description\":\"" + escape(description) + "\","
-                + "\"color\":" + color
-                + "}]}";
+                + "\"embeds\":[" + embed.toJson() + "]}";
 
         HttpRequest request;
         try {
@@ -73,32 +76,7 @@ public final class DiscordWebhook {
                 });
     }
 
-    /**
-     * Escapa el texto para meterlo en JSON a mano. Se hace asi para no
-     * arrastrar una libreria entera solo por esto.
-     */
     private static String escape(String input) {
-        if (input == null) {
-            return "";
-        }
-        StringBuilder out = new StringBuilder(input.length() + 16);
-        for (int i = 0; i < input.length(); i++) {
-            char c = input.charAt(i);
-            switch (c) {
-                case '"' -> out.append("\\\"");
-                case '\\' -> out.append("\\\\");
-                case '\n' -> out.append("\\n");
-                case '\r' -> out.append("\\r");
-                case '\t' -> out.append("\\t");
-                default -> {
-                    if (c < 0x20) {
-                        out.append(String.format("\\u%04x", (int) c));
-                    } else {
-                        out.append(c);
-                    }
-                }
-            }
-        }
-        return out.toString();
+        return DiscordEmbed.escape(input);
     }
 }

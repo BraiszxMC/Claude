@@ -286,7 +286,7 @@ de arrancar el servidor.
 | `/ranked join <modo>` | `bbranked.play` | entrar a la cola |
 | `/ranked leave` | `bbranked.play` | salir de la cola |
 | `/ranked stats [jugador]` | `bbranked.stats` | ver estadisticas |
-| `/ranked top [pagina]` | `bbranked.stats` | ranking global |
+| `/ranked top [tabla] [pagina]` | `bbranked.stats` | rankings (elo, goals, mvps, wins...) |
 | `/ranked queues` | — | colas activas |
 | `/ranked reload` | `bbranked.admin` | recargar config y mensajes (revisa las arenas de paso) |
 | `/ranked check` | `bbranked.admin` | revisar que las arenas del config existan y esten bien |
@@ -429,8 +429,49 @@ Necesitan PlaceholderAPI:
 %bbranked_rank_id%      %bbranked_matches%    %bbranked_position%
 %bbranked_winrate%      %bbranked_goals%      %bbranked_in_queue%
 %bbranked_in_match%     %bbranked_mvps%
-%bbranked_top_name_1%   %bbranked_top_elo_1%   (1..N)
 ```
+
+### Tablas de clasificacion
+
+Formato: `%bbranked_top_<tabla>_<name|value>_<puesto>%`
+
+```
+%bbranked_top_elo_name_1%       %bbranked_top_elo_value_1%
+%bbranked_top_goals_name_1%     %bbranked_top_goals_value_1%
+%bbranked_top_wins_name_1%      %bbranked_top_wins_value_1%
+%bbranked_top_mvps_name_1%      %bbranked_top_mvps_value_1%
+%bbranked_top_matches_name_1%   %bbranked_top_matches_value_1%
+%bbranked_top_winrate_name_1%   %bbranked_top_winrate_value_1%
+%bbranked_top_streak_name_1%    %bbranked_top_streak_value_1%
+%bbranked_top_peak_name_1%      %bbranked_top_peak_value_1%
+%bbranked_top_losses_...%       %bbranked_top_draws_...%
+%bbranked_top_leaves_...%
+```
+
+Tablas disponibles: `elo`, `peak`, `wins`, `losses`, `draws`, `goals`,
+`mvps`, `matches`, `streak`, `winrate`, `leaves`.
+
+Tu puesto en cada una: `%bbranked_position_<tabla>%`, por ejemplo
+`%bbranked_position_goals%`.
+
+Ejemplo para un holograma:
+
+```
+&6&lTOP GOLEADORES
+&e1. &f%bbranked_top_goals_name_1% &7- &a%bbranked_top_goals_value_1%
+&e2. &f%bbranked_top_goals_name_2% &7- &a%bbranked_top_goals_value_2%
+&e3. &f%bbranked_top_goals_name_3% &7- &a%bbranked_top_goals_value_3%
+```
+
+Los mismos rankings se pueden ver en el chat con `/ranked top <tabla>`:
+
+```bash
+/ranked top goals
+/ranked top mvps 2
+```
+
+> `%bbranked_top_name_N%` y `%bbranked_top_elo_N%` siguen funcionando, apuntan
+> a la tabla de Elo.
 
 ---
 
@@ -520,6 +561,21 @@ Nuevo webhook →** elige canal **→ Copiar URL**.
 
 Las peticiones van de forma asincrona con `HttpClient`, asi que un Discord
 caido o lento nunca bloquea el servidor.
+
+Los mensajes son embeds con la informacion repartida en campos:
+
+* **Resultado de partida**: marcador, ganador, los dos equipos con el Elo
+  antes → despues de cada jugador, goles marcados, MVP, abandonos, arena y
+  duracion. La miniatura es la cabeza del MVP.
+* **Ascenso/descenso**: division anterior → nueva, Elo, pico, partidas,
+  record, winrate y MVPs del jugador.
+* **Fin de temporada**: podio con medallas, resto del top 10, numero de
+  jugadores y los mejores en goles, MVPs y victorias.
+* **Aviso de boosting**: jugadores implicados, cuantas partidas llevan y que
+  porcentaje de Elo estan ganando ya.
+
+Las cabezas de jugador salen de `mc-heads.net`. La descarga la hace Discord,
+no tu servidor: el plugin solo manda la URL en el embed.
 
 ### Decay por inactividad
 

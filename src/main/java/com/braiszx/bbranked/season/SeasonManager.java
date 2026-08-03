@@ -9,7 +9,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 
 import java.util.List;
-import java.util.function.Consumer;
+import java.util.function.BiConsumer;
 
 /**
  * Temporadas: cierre, premios y reset suave del Elo.
@@ -57,18 +57,18 @@ public final class SeasonManager {
      * @param nextName nombre de la temporada nueva
      * @param feedback recibe mensajes de progreso en el hilo principal
      */
-    public void closeSeason(String nextName, Consumer<String> feedback) {
+    public void closeSeason(String nextName, BiConsumer<String, List<LeaderboardEntry>> feedback) {
         if (!config.seasonEnabled()) {
-            feedback.accept("Las temporadas estan desactivadas en el config.");
+            feedback.accept("Las temporadas estan desactivadas en el config.", List.of());
             return;
         }
         Season season = current;
         if (season == null) {
-            feedback.accept("No hay ninguna temporada abierta.");
+            feedback.accept("No hay ninguna temporada abierta.", List.of());
             return;
         }
         if (closing) {
-            feedback.accept("Ya se esta cerrando la temporada, espera.");
+            feedback.accept("Ya se esta cerrando la temporada, espera.", List.of());
             return;
         }
         closing = true;
@@ -94,7 +94,7 @@ public final class SeasonManager {
 
                 giveRewards(ranking);
                 feedback.accept("Temporada '" + season.name() + "' cerrada con "
-                        + ranking.size() + " jugadores. Empieza '" + nextName + "'.");
+                        + ranking.size() + " jugadores. Empieza '" + nextName + "'.", ranking);
             });
         });
     }

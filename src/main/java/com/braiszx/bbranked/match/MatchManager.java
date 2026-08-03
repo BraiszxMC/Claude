@@ -9,6 +9,7 @@ import com.braiszx.bbranked.data.StatsManager;
 import com.braiszx.bbranked.elo.EloChange;
 import com.braiszx.bbranked.elo.EloCalculator;
 import com.braiszx.bbranked.elo.MatchWinner;
+import com.braiszx.bbranked.hook.DiscordEmbed;
 import com.braiszx.bbranked.hook.DiscordWebhook;
 import com.braiszx.bbranked.util.Messages;
 import com.braiszx.bbranked.util.Sounds;
@@ -634,7 +635,7 @@ public final class MatchManager {
             broadcastResult(match, winner);
         }
 
-        sendResultToDiscord(match, winner, changes);
+        sendResultToDiscord(match, winner, changes, mvps, mvpGoals);
 
         // Los jugadores ya pueden volver a la cola aunque la arena tarde un
         // poco en reiniciarse.
@@ -751,10 +752,22 @@ public final class MatchManager {
             sounds.play(player, promoted ? "rank-up" : "rank-down");
 
             if (config.discordRankChanges()) {
-                discord.send(promoted ? "Ascenso de division" : "Descenso de division",
-                        "**" + player.getName() + "** " + (promoted ? "sube" : "baja") + " a **"
-                                + stripTags(newRank.displayName()) + "** con " + change.after() + " Elo.",
-                        promoted ? DiscordWebhook.COLOR_GREEN : DiscordWebhook.COLOR_RED);
+                PlayerStats playerStats = stats.require(change.uuid());
+                discord.send(new DiscordEmbed()
+                        .author(promoted ? "Ascenso de division" : "Descenso de division")
+                        .title((promoted ? "⬆ " : "⬇ ") + player.getName())
+                        .description("**" + stripTags(previousRank.displayName()) + "** → **"
+                                + stripTags(newRank.displayName()) + "**")
+                        .color(promoted ? DiscordWebhook.COLOR_GREEN : DiscordWebhook.COLOR_RED)
+                        .playerHead(player.getName())
+                        .field("Elo", String.valueOf(change.after()), true)
+                        .field("Pico", String.valueOf(playerStats.peakElo()), true)
+                        .field("Partidas", String.valueOf(playerStats.matches()), true)
+                        .field("Record", playerStats.wins() + "V / " + playerStats.losses()
+                                + "D / " + playerStats.draws() + "E", true)
+                        .field("Winrate", String.format(Locale.ROOT, "%.1f%%", playerStats.winRate()), true)
+                        .field("MVPs", String.valueOf(playerStats.mvps()), true)
+                        .withTimestamp());
             }
         }
 
@@ -791,43 +804,106 @@ public final class MatchManager {
                 + match.mode().displayName() + ".");
 
         if (config.discordBoostingAlerts()) {
-            discord.send("Posible boosting",
-                    "**" + involved + "** llevan **" + match.worstRepeatCount()
-                            + "** partidas entre ellos en " + match.mode().displayName() + ".",
-                    DiscordWebhook.COLOR_GOLD);
+            discord.send(new DiscordEmbed()
+                    .author("Aviso de integridad")
+                    .title("⚠ Posible boosting")
+                    .description("Estos jugadores llevan **" + match.worstRepeatCount()
+                            + "** partidas seguidas entre ellos.")
+                    .color(DiscordWebhook.COLOR_GOLD)
+                    .field("Jugadores", involved, false)
+                    .field("Modo", match.mode().displayName(), true)
+                    .field("Arena", match.arenaName(), true)
+                    .field("Ganancia de Elo actual",
+                            Math.round(elo.repeatMultiplier(match.worstRepeatCount()) * 100) + "%", true)
+                    .footer("Se reinicia solo tras " + config.repeatResetHours()
+                            + "h sin volver a enfrentarse")
+                    .withTimestamp());
         }
     }
 
-    private void sendResultToDiscord(RankedMatch match, MatchWinner winner, List<EloChange> changes) {
+    private void sendResultToDiscord(RankedMatch match, MatchWinner winner, List<EloChange> changes,
+                                     Set<UUID> mvps, int mvpGoals) {
         if (!config.discordEnabled() || !config.discordMatchResults()) {
             return;
         }
 
-        StringBuilder description = new StringBuilder();
-        description.append("**").append(names(match.red())).append("** ")
-                .append(match.redScore()).append(" - ").append(match.blueScore())
-                .append(" **").append(names(match.blue())).append("**\n");
-
-        if (winner == MatchWinner.DRAW) {
-            description.append("Empate\n");
-        } else {
-            description.append("Gana el equipo ")
-                    .append(winner == MatchWinner.RED ? "rojo" : "azul").append("\n");
-        }
-
-        description.append("\n");
+        Map<UUID, EloChange> byUuid = new HashMap<>();
         for (EloChange change : changes) {
-            PlayerStats playerStats = stats.cached(change.uuid());
-            String name = playerStats != null ? playerStats.name() : "?";
-            int delta = change.delta();
-            description.append(name).append(": ")
-                    .append(delta >= 0 ? "+" : "").append(delta)
-                    .append(" (").append(change.after()).append(")\n");
+            byUuid.put(change.uuid(), change);
         }
 
-        discord.send("Partida ranked - " + match.mode().displayName(),
-                description.toString(),
-                winner == MatchWinner.DRAW ? DiscordWebhook.COLOR_BLUE : DiscordWebhook.COLOR_GREEN);
+        String scoreline = "# " + match.redScore() + " - " + match.blueScore();
+        String outcome = switch (winner) {
+            case RED -> "Victoria del equipo **Rojo**";
+            case BLUE -> "Victoria del equipo **Azul**";
+            case DRAW -> "**Empate**";
+        };
+
+        DiscordEmbed embed = new DiscordEmbed()
+                .author("Partida ranked - " + match.mode().displayName())
+                .title(teamLabel(match.red()) + "  vs  " + teamLabel(match.blue()))
+                .description(scoreline + "\n" + outcome)
+                .color(winner == MatchWinner.DRAW ? DiscordWebhook.COLOR_BLUE : DiscordWebhook.COLOR_GREEN)
+                .withTimestamp();
+
+        embed.field(winner == MatchWinner.RED ? "🔴 Rojo (ganador)" : "🔴 Rojo",
+                teamBreakdown(match.red(), byUuid, mvps, match.goals()), true);
+        embed.field(winner == MatchWinner.BLUE ? "🔵 Azul (ganador)" : "🔵 Azul",
+                teamBreakdown(match.blue(), byUuid, mvps, match.goals()), true);
+
+        if (!mvps.isEmpty()) {
+            embed.field("⭐ MVP", names(new ArrayList<>(mvps)) + " (" + mvpGoals + " goles)", false);
+            // La miniatura es la cabeza del MVP; si hay varios, la del primero.
+            PlayerStats mvpStats = stats.cached(mvps.iterator().next());
+            if (mvpStats != null) {
+                embed.playerHead(mvpStats.name());
+            }
+        }
+
+        if (!match.leavers().isEmpty()) {
+            embed.field("🚪 Abandonos", names(new ArrayList<>(match.leavers())), false);
+        }
+
+        embed.footer("Arena: " + match.arenaName() + "  ·  Duracion: " + formatDuration(match.ageSeconds()));
+        discord.send(embed);
+    }
+
+    /**
+     * Nombres del equipo en una linea, para el titulo.
+     */
+    private String teamLabel(List<UUID> team) {
+        return names(team);
+    }
+
+    /**
+     * Detalle de cada jugador: Elo antes, despues, diferencia y goles.
+     */
+    private String teamBreakdown(List<UUID> team, Map<UUID, EloChange> changes, Set<UUID> mvps,
+                                 Map<UUID, Integer> goals) {
+        StringBuilder out = new StringBuilder();
+        for (UUID uuid : team) {
+            PlayerStats playerStats = stats.cached(uuid);
+            String name = playerStats != null ? playerStats.name() : "?";
+            EloChange change = changes.get(uuid);
+
+            out.append(mvps.contains(uuid) ? "⭐ " : "• ").append(name);
+
+            int scored = goals.getOrDefault(uuid, 0);
+            if (scored > 0) {
+                out.append("  ⚽ ").append(scored);
+            }
+            if (change != null) {
+                int delta = change.delta();
+                out.append("\n`").append(change.before()).append(" → ").append(change.after())
+                        .append("` ").append(delta >= 0 ? "**+" : "**").append(delta).append("**");
+            }
+            out.append('\n');
+        }
+        return out.toString();
+    }
+
+    private static String formatDuration(long seconds) {
+        return String.format("%d:%02d", seconds / 60, seconds % 60);
     }
 
     private void persistHistory(RankedMatch match, MatchWinner winner, List<EloChange> changes) {

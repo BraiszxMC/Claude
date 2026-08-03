@@ -142,9 +142,10 @@ stats:
   no-data: "<red>Ese jugador todavia no ha jugado ninguna ranked."
 
 top:
-  header: "<gray>--- <white>Top Elo</white> <gray>(pagina {page}/{pages}) ---"
-  line: "<gray>{position}. <white>{player}</white> <gray>- <white>{elo}</white> <gray>| <reset>{rank}"
+  header: "<gray>--- <white>Top {type}</white> <gray>(pagina {page}/{pages}) ---"
+  line: "<gray>{position}. <white>{player}</white> <gray>- <yellow>{value}</yellow>"
   empty: "<gray>Todavia no hay nadie en el top."
+  unknown-type: "<red>La tabla <white>{type}</white> no existe. Disponibles: <white>{types}</white>."
 
 admin:
   elo-set: "<green>Elo de <white>{player}</white> puesto a <white>{elo}</white>."
@@ -190,7 +191,8 @@ help:
   - "<gold>Tu progreso:</gold>"
   - "<white>/ranked stats [jugador]</white> <gray>- tu Elo, division, victorias..."
   - "<white>/ranked history [jugador]</white> <gray>- tus ultimas partidas"
-  - "<white>/ranked top [pagina]</white> <gray>- el ranking del servidor"
+  - "<white>/ranked top [tabla] [pagina]</white> <gray>- rankings del servidor"
+  - "<gray>  Tablas: <white>elo, goals, wins, mvps, matches, winrate...</white>"
   - "<white>/ranked queues</white> <gray>- cuanta gente hay esperando"
   - "<white>/ranked season</white> <gray>- temporada actual"
   - ""

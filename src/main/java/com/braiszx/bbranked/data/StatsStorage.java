@@ -403,6 +403,36 @@ public final class StatsStorage implements AutoCloseable {
         }, executor);
     }
 
+    /**
+     * Clasificacion por cualquiera de las estadisticas.
+     *
+     * <p>La expresion de orden sale del enum {@link LeaderboardType}, nunca de
+     * texto escrito por nadie, asi que puede ir concatenada.</p>
+     */
+    public CompletableFuture<List<TopEntry>> topBy(LeaderboardType type, int limit, int minMatches) {
+        return CompletableFuture.supplyAsync(() -> {
+            List<TopEntry> entries = new ArrayList<>();
+            String sql = "SELECT uuid, name, " + type.expression() + " AS value FROM " + playersTable
+                    + " WHERE (wins + losses + draws) >= ? ORDER BY value DESC LIMIT ?";
+
+            try (PreparedStatement statement = connection().prepareStatement(sql)) {
+                statement.setInt(1, minMatches);
+                statement.setInt(2, limit);
+                try (ResultSet result = statement.executeQuery()) {
+                    while (result.next()) {
+                        entries.add(new TopEntry(
+                                UUID.fromString(result.getString("uuid")),
+                                result.getString("name"),
+                                result.getDouble("value")));
+                    }
+                }
+            } catch (SQLException exception) {
+                plugin.getLogger().log(Level.SEVERE, "Error cargando el ranking de " + type.id(), exception);
+            }
+            return entries;
+        }, executor);
+    }
+
     public CompletableFuture<Void> recordMatch(String mode, String arena, int redScore, int blueScore,
                                                String winner, String redPlayers, String bluePlayers,
                                                String eloChanges) {

@@ -25,6 +25,8 @@ public final class StatsManager {
 
     private volatile List<LeaderboardEntry> leaderboard = Collections.emptyList();
     private volatile long leaderboardUpdatedAt;
+    /** Clasificaciones por estadistica (goles, MVPs, victorias...). */
+    private final Map<LeaderboardType, List<TopEntry>> tops = new ConcurrentHashMap<>();
 
     public StatsManager(RankedConfig config, StatsStorage storage) {
         this.config = config;
@@ -150,6 +152,34 @@ public final class StatsManager {
         leaderboardUpdatedAt = System.currentTimeMillis();
         storage.topPlayers(config.leaderboardPageSize() * 20, config.leaderboardMinMatches())
                 .thenAccept(entries -> leaderboard = entries);
+
+        // Y todas las demas tablas (goles, MVPs, victorias...), que los
+        // placeholders consultan constantemente y no pueden esperar a la
+        // base de datos.
+        for (LeaderboardType type : LeaderboardType.values()) {
+            storage.topBy(type, config.leaderboardPageSize() * 20, config.leaderboardMinMatches())
+                    .thenAccept(entries -> tops.put(type, entries));
+        }
+    }
+
+    /**
+     * Clasificacion cacheada del tipo pedido.
+     */
+    public List<TopEntry> top(LeaderboardType type) {
+        return tops.getOrDefault(type, Collections.emptyList());
+    }
+
+    /**
+     * Puesto del jugador en una tabla concreta, o -1 si no aparece.
+     */
+    public int positionIn(LeaderboardType type, UUID uuid) {
+        List<TopEntry> entries = top(type);
+        for (int i = 0; i < entries.size(); i++) {
+            if (entries.get(i).uuid().equals(uuid)) {
+                return i + 1;
+            }
+        }
+        return -1;
     }
 
     /**
