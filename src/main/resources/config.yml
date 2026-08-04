@@ -56,6 +56,100 @@ advertencias:
     5: 'tempban %jugador% 1d Acumulacion de advertencias (%cantidad%)'
     8: 'ban %jugador% permanente Acumulacion de advertencias (%cantidad%)'
 
+chat:
+  # /clearX - lineas en blanco que se envian para vaciar el chat
+  lineas: 100
+  # Anunciar quien ha limpiado el chat
+  anunciar: true
+  # Los que tengan moderacionx.clearx.exento no ven su chat borrado
+  respetar-exentos: true
+
+efectos:
+  # /efectos - menu de efectos de pociones
+  titulo-efectos: '<dark_gray>Efectos <gray>(%pagina%/%paginas%)'
+  titulo-objetivos: '<dark_gray>¿A quien? <white>%efecto%'
+  titulo-jugadores: '<dark_gray>Elige jugadores <gray>(%pagina%/%paginas%)'
+  titulo-ajustes: '<dark_gray>Ajustes <dark_gray>» <white>%efecto%'
+  # Valores con los que se abre el menu
+  duracion-por-defecto: 30
+  nivel-por-defecto: 1
+  particulas-por-defecto: true
+  # Limites
+  duracion-maxima: 86400
+  nivel-maximo: 10
+  permitir-permanente: true
+  # Cuanto suman o restan los botones de duracion (en segundos)
+  incremento-corto: 10
+  incremento-largo: 60
+  # Cerrar el menu al aplicar el efecto
+  cerrar-al-aplicar: true
+  # Nombres de jugador que se listan en los mensajes antes de resumir con (+N)
+  nombres-mostrados: 5
+  # Materiales de los botones del menu
+  materiales:
+    relleno: 'GRAY_STAINED_GLASS_PANE'
+    anterior: 'ARROW'
+    siguiente: 'ARROW'
+    volver: 'OAK_DOOR'
+    cerrar: 'BARRIER'
+    confirmar: 'LIME_DYE'
+    aplicar: 'EMERALD_BLOCK'
+    quitar-todos: 'MILK_BUCKET'
+    uno: 'PLAYER_HEAD'
+    varios: 'CHEST'
+    todos: 'BEACON'
+    mas: 'LIME_STAINED_GLASS_PANE'
+    menos: 'RED_STAINED_GLASS_PANE'
+    duracion: 'CLOCK'
+    nivel: 'GLOWSTONE_DUST'
+    objetivos: 'PAPER'
+    si: 'GLOWSTONE'
+    no: 'GUNPOWDER'
+    # Icono propio para un efecto concreto (si no, se usa una pocion de su color):
+    # efecto-speed: 'SUGAR'
+    # efecto-regeneration: 'GHAST_TEAR'
+  # Nombres propios para los efectos (si falta se usa el nombre interno):
+  nombres:
+    speed: 'Velocidad'
+    slowness: 'Lentitud'
+    haste: 'Prisa'
+    mining_fatigue: 'Fatiga minera'
+    strength: 'Fuerza'
+    instant_health: 'Sanacion instantanea'
+    instant_damage: 'Dano instantaneo'
+    jump_boost: 'Salto'
+    nausea: 'Nauseas'
+    regeneration: 'Regeneracion'
+    resistance: 'Resistencia'
+    fire_resistance: 'Resistencia al fuego'
+    water_breathing: 'Respiracion acuatica'
+    invisibility: 'Invisibilidad'
+    blindness: 'Ceguera'
+    night_vision: 'Vision nocturna'
+    hunger: 'Hambre'
+    weakness: 'Debilidad'
+    poison: 'Veneno'
+    wither: 'Marchitamiento'
+    health_boost: 'Vida extra'
+    absorption: 'Absorcion'
+    saturation: 'Saturacion'
+    glowing: 'Brillo'
+    levitation: 'Levitacion'
+    luck: 'Suerte'
+    unluck: 'Mala suerte'
+    slow_falling: 'Caida lenta'
+    conduit_power: 'Poder del conducto'
+    dolphins_grace: 'Gracia del delfin'
+    bad_omen: 'Mal presagio'
+    hero_of_the_village: 'Heroe de la aldea'
+    darkness: 'Oscuridad'
+    trial_omen: 'Presagio de prueba'
+    raid_omen: 'Presagio de incursion'
+    wind_charged: 'Cargado de viento'
+    weaving: 'Tejedor'
+    oozing: 'Rezumante'
+    infested: 'Infestado'
+
 historial:
   # Sanciones mostradas por pagina en /historial
   lineas-por-pagina: 8
@@ -245,6 +339,12 @@ ayuda:
     - comando: '/anuncio <mensaje>'
       descripcion: 'Anuncio para todo el servidor'
       permiso: 'moderacionx.anuncio'
+    - comando: '/clearX [jugador]'
+      descripcion: 'Limpiar el chat'
+      permiso: 'moderacionx.clearx'
+    - comando: '/efectos [jugador]'
+      descripcion: 'Menu de efectos de pociones'
+      permiso: 'moderacionx.efectos'
     - comando: '/mx recargar'
       descripcion: 'Recargar la configuracion'
       permiso: 'moderacionx.admin'

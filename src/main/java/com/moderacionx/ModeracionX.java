@@ -8,6 +8,8 @@ import com.moderacionx.comandos.ComandoAnuncio;
 import com.moderacionx.comandos.ComandoAyuda;
 import com.moderacionx.comandos.ComandoBan;
 import com.moderacionx.comandos.ComandoBanIP;
+import com.moderacionx.comandos.ComandoClear;
+import com.moderacionx.comandos.ComandoEfectos;
 import com.moderacionx.comandos.ComandoGM;
 import com.moderacionx.comandos.ComandoHistorial;
 import com.moderacionx.comandos.ComandoInvsee;
@@ -21,10 +23,13 @@ import com.moderacionx.comandos.ComandoUnmute;
 import com.moderacionx.comandos.ComandoWarn;
 import com.moderacionx.config.Ajustes;
 import com.moderacionx.config.Mensajes;
+import com.moderacionx.efectos.GestorEfectos;
 import com.moderacionx.espia.GestorEspias;
 import com.moderacionx.invsee.GestorInvsee;
 import com.moderacionx.listeners.ListenerChat;
+import com.moderacionx.listeners.ListenerComandos;
 import com.moderacionx.listeners.ListenerConexion;
+import com.moderacionx.listeners.ListenerEfectos;
 import com.moderacionx.listeners.ListenerEspia;
 import com.moderacionx.listeners.ListenerInventario;
 import com.moderacionx.listeners.ListenerSecretos;
@@ -57,6 +62,7 @@ public final class ModeracionX extends JavaPlugin {
     private GestorEspias espias;
     private GestorSecretos secretos;
     private GestorInvsee invsee;
+    private GestorEfectos efectos;
     private BukkitTask tareaRevision;
 
     @Override
@@ -73,6 +79,7 @@ public final class ModeracionX extends JavaPlugin {
         espias = new GestorEspias(this);
         secretos = new GestorSecretos(this);
         invsee = new GestorInvsee(this);
+        efectos = new GestorEfectos(this);
 
         registrarComandos();
         registrarListeners();
@@ -144,6 +151,8 @@ public final class ModeracionX extends JavaPlugin {
         registrar("spy", new ComandoSpy(this));
         registrar("gm", new ComandoGM(this));
         registrar("anuncio", new ComandoAnuncio(this));
+        registrar("clearx", new ComandoClear(this));
+        registrar("efectos", new ComandoEfectos(this));
         registrar("help", new ComandoAyuda(this));
     }
 
@@ -159,11 +168,13 @@ public final class ModeracionX extends JavaPlugin {
 
     private void registrarListeners() {
         var gestor = Bukkit.getPluginManager();
+        gestor.registerEvents(new ListenerComandos(this), this);
         gestor.registerEvents(new ListenerSecretos(this), this);
         gestor.registerEvents(new ListenerConexion(this), this);
         gestor.registerEvents(new ListenerChat(this), this);
         gestor.registerEvents(new ListenerEspia(this), this);
         gestor.registerEvents(new ListenerInventario(this), this);
+        gestor.registerEvents(new ListenerEfectos(this), this);
     }
 
     private void programarRevision() {
@@ -270,5 +281,9 @@ public final class ModeracionX extends JavaPlugin {
 
     public GestorInvsee invsee() {
         return invsee;
+    }
+
+    public GestorEfectos efectos() {
+        return efectos;
     }
 }

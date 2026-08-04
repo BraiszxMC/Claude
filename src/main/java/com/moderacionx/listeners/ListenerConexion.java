@@ -109,5 +109,6 @@ public final class ListenerConexion implements Listener {
         plugin.invsee().cerrarVistasDe(uuid);
         plugin.invsee().olvidar(uuid);
         plugin.secretos().limpiar(uuid);
+        plugin.efectos().olvidar(uuid);
     }
 }

@@ -111,9 +111,7 @@ public final class Tiempo {
         anadir(partes, dias, "tiempo.dia", "tiempo.dias", diccionario);
         anadir(partes, horas, "tiempo.hora", "tiempo.horas", diccionario);
         anadir(partes, minutos, "tiempo.minuto", "tiempo.minutos", diccionario);
-        if (partes.isEmpty()) {
-            anadir(partes, segundos, "tiempo.segundo", "tiempo.segundos", diccionario);
-        }
+        anadir(partes, segundos, "tiempo.segundo", "tiempo.segundos", diccionario);
         if (partes.isEmpty()) {
             return "0 " + diccionario.palabra("tiempo.segundos");
         }

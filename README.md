@@ -83,6 +83,25 @@ Muestra en directo los comandos de todos los jugadores. Se puede ignorar comando
 censurar los de contraseñas (`/login`, `/register`…), incluir la consola, incluir el chat
 y guardar todo en `logs/comandos.log`.
 
+### Efectos
+
+`/efectos [jugador]` abre un menú por pasos:
+
+1. **Elige el efecto** — todos los del servidor, en páginas, cada uno con una poción de su
+   propio color. Clic izquierdo para darlo, clic derecho para quitarlo. También hay un
+   botón para **limpiar todos los efectos**.
+2. **Elige a quién** — un jugador, varios (los vas marcando y confirmas) o todo el servidor.
+3. **Ajusta** — duración con botones de ±10s y ±1m, nivel con ±1, partículas visibles sí/no
+   y modo permanente. Cuando lo tengas, pulsa **APLICAR**.
+
+Los incrementos, los límites, los materiales de los botones y los nombres de los efectos
+se cambian en `config.yml`.
+
+### Chat
+
+`/clearX [jugador]` vacía el chat de todo el servidor, o el de un jugador concreto.
+Quien tenga `moderacionx.clearx.exento` conserva su chat.
+
 ### Extras
 
 | Comando | Qué hace |
@@ -95,6 +114,7 @@ y guardar todo en `logs/comandos.log`.
 | `/mx vpn check <ip\|jugador>` | Comprueba una IP contra el anti-VPN |
 | `/mx vpn whitelist add\|remove <ip\|jugador>` | Excluye del anti-VPN |
 | `/mx vpn cache` | Vacía la caché del anti-VPN |
+| `/mx efectos` | Lista los efectos que verá el menú (útil para revisar los nombres) |
 
 ---
 
@@ -202,6 +222,11 @@ nadie puede colar formato ni eventos de clic a través de una razón.
 | `moderacionx.gm` + `moderacionx.gm.0-3` | Modo de juego (hacen falta los dos) |
 | `moderacionx.gm.otros` | Cambiárselo a otros |
 | `moderacionx.anuncio` / `.formato` | Anuncios / usar MiniMessage en ellos |
+| `moderacionx.clearx` | Limpiar el chat |
+| `moderacionx.clearx.exento` | A esta persona no se le borra el chat |
+| `moderacionx.efectos` | Abrir el menú de efectos |
+| `moderacionx.efectos.otros` | Aplicárselos a otros |
+| `moderacionx.efectos.todos` | Aplicárselos a todo el servidor |
 | `moderacionx.notificaciones` | Recibir los avisos del staff |
 | `moderacionx.silencioso` | Usar la bandera `-s` |
 | `moderacionx.secretos` | Usar los comandos secretos sin clave |
@@ -218,3 +243,5 @@ nadie puede colar formato ni eventos de clic a través de una razón.
   Internet, deja `antivpn.activado: false` o `fallar-abierto: true`.
 - Las acciones automáticas de las advertencias se ejecutan como consola, así que puedes
   llamar a cualquier comando de cualquier plugin desde ellas.
+- Los comandos funcionan escritos con mayúsculas (`/clearX`, `/BAN`, `/Efectos`): el plugin
+  normaliza el nombre antes de que el servidor lo busque.

@@ -179,6 +179,122 @@ gamemode:
 anuncio:
   enviado: '%prefijo%<green>Anuncio enviado.'
 
+chat:
+  anuncio: '%prefijo%<gray>El chat ha sido limpiado por <white>%autor%<gray>.'
+  limpiado: '%prefijo%<green>Chat limpiado a <white>%cantidad% <green>jugadores.'
+  limpiado-jugador: '%prefijo%<green>Has limpiado el chat de <white>%jugador%<green>.'
+
+efectos:
+  # --- palabras sueltas usadas en los titulos ---
+  palabra-quitar: 'Quitar'
+  palabra-limpiar: 'Limpiar todos los efectos'
+  palabra-todos: 'Todo el servidor'
+  estado-seleccionado: '<green>Seleccionado'
+  estado-no-seleccionado: '<gray>Sin seleccionar'
+
+  # --- mensajes de chat ---
+  aplicado: '%prefijo%<green>Aplicado <white>%efecto% %nivel% <green>durante <white>%duracion% <green>a <white>%objetivos%<green>.'
+  quitado: '%prefijo%<green>Quitado <white>%efecto% <green>a <white>%objetivos%<green>.'
+  limpiado: '%prefijo%<green>Efectos limpiados a <white>%objetivos%<green>.'
+  notificar: '%prefijo%<gray>%autor% te ha dado <white>%efecto% %nivel% <gray>durante <white>%duracion%<gray>.'
+  notificar-limpiado: '%prefijo%<gray>%autor% te ha quitado todos los efectos.'
+  sin-objetivos: '%prefijo%<red>No has elegido ningun jugador.'
+  seleccionado: '%prefijo%<green>+ <white>%jugador%'
+  deseleccionado: '%prefijo%<red>- <white>%jugador%'
+
+  # --- botones del menu ---
+  item-efecto:
+    nombre: '<yellow><bold>%efecto%'
+    lore:
+      - '<dark_gray>%clave%'
+      - ''
+      - '<gray>Clic izquierdo <dark_gray>» <white>aplicar'
+      - '<gray>Clic derecho <dark_gray>» <white>quitar'
+  item-quitar-todos:
+    nombre: '<red><bold>Limpiar todos los efectos'
+    lore:
+      - '<gray>Quita cualquier efecto activo'
+      - '<gray>a los jugadores que elijas.'
+  item-uno:
+    nombre: '<aqua><bold>Un jugador'
+    lore:
+      - '<gray>Elige a una sola persona.'
+  item-varios:
+    nombre: '<aqua><bold>Varios jugadores'
+    lore:
+      - '<gray>Marca a los que quieras'
+      - '<gray>y pulsa confirmar.'
+  item-todos:
+    nombre: '<aqua><bold>Todo el servidor'
+    lore:
+      - '<gray>Se aplica a todos los conectados.'
+      - '<dark_gray>Permiso: moderacionx.efectos.todos'
+  item-jugador:
+    nombre: '<white>%jugador%'
+    lore:
+      - '<gray>Vida: <white>%vida%'
+      - '<gray>Mundo: <white>%mundo%'
+      - ''
+      - '%estado%'
+  item-confirmar:
+    nombre: '<green><bold>Confirmar'
+    lore:
+      - '<gray>Jugadores elegidos: <white>%cantidad%'
+  item-duracion:
+    nombre: '<aqua><bold>Duracion'
+    lore:
+      - '<gray>Actual: <white>%duracion%'
+  item-nivel:
+    nombre: '<light_purple><bold>Nivel'
+    lore:
+      - '<gray>Actual: <white>%nivel%'
+  item-mas:
+    nombre: '<green>+ %cantidad%'
+    lore: []
+  item-menos:
+    nombre: '<red>- %cantidad%'
+    lore: []
+  item-particulas-si:
+    nombre: '<green><bold>Particulas visibles'
+    lore:
+      - '<gray>Se ven las particulas del efecto.'
+      - '<yellow>Clic para ocultarlas.'
+  item-particulas-no:
+    nombre: '<red><bold>Particulas ocultas'
+    lore:
+      - '<gray>El efecto no se vera.'
+      - '<yellow>Clic para mostrarlas.'
+  item-permanente-si:
+    nombre: '<green><bold>Permanente'
+    lore:
+      - '<gray>El efecto no caduca.'
+      - '<yellow>Clic para usar la duracion.'
+  item-permanente-no:
+    nombre: '<gray><bold>Duracion limitada'
+    lore:
+      - '<gray>El efecto caduca solo.'
+      - '<yellow>Clic para hacerlo permanente.'
+  item-objetivos:
+    nombre: '<white><bold>Objetivos'
+    lore:
+      - '<gray>%objetivos%'
+  item-aplicar:
+    nombre: '<green><bold>APLICAR'
+    lore:
+      - '<gray>Confirma y aplica el efecto.'
+  item-anterior:
+    nombre: '<yellow>« Pagina anterior'
+    lore: []
+  item-siguiente:
+    nombre: '<yellow>Pagina siguiente »'
+    lore: []
+  item-volver:
+    nombre: '<yellow>« Volver'
+    lore: []
+  item-cerrar:
+    nombre: '<red>Cerrar'
+    lore: []
+
 antivpn:
   pantalla:
     - ''
@@ -219,5 +335,8 @@ admin:
     - '<gray>Silenciado: %silenciado%'
     - '<gray>Sanciones totales: <white>%sanciones%'
     - '<gray>Advertencias activas: <white>%warns%'
+  efectos:
+    - '<gray>Efectos disponibles: <white>%cantidad%'
+    - '<dark_gray>%lista%'
   afirmativo: '<red>Si'
   negativo: '<green>No'

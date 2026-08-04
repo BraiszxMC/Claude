@@ -96,6 +96,16 @@ commands:
     usage: /anuncio <mensaje>
     aliases: [ anunciar, broadcast, bc ]
     permission: moderacionx.anuncio
+  clearx:
+    description: Limpia el chat del servidor.
+    usage: /clearX [jugador]
+    aliases: [ clearchat, limpiarchat, cc, clearx ]
+    permission: moderacionx.clearx
+  efectos:
+    description: Abre el menu de efectos de pociones.
+    usage: /efectos [jugador]
+    aliases: [ efecto, effects, potions ]
+    permission: moderacionx.efectos
   help:
     description: Menu de ayuda de ModeracionX.
     usage: /help [pagina]
@@ -125,6 +135,10 @@ permissions:
       moderacionx.gm: true
       moderacionx.gm.otros: true
       moderacionx.anuncio: true
+      moderacionx.clearx: true
+      moderacionx.efectos: true
+      moderacionx.efectos.otros: true
+      moderacionx.efectos.todos: true
       moderacionx.notificaciones: true
       moderacionx.silencioso: true
       moderacionx.secretos: true
@@ -184,6 +198,21 @@ permissions:
     default: op
   moderacionx.anuncio.formato:
     description: Permite usar formato MiniMessage en los anuncios.
+    default: op
+  moderacionx.clearx:
+    description: Limpiar el chat con /clearX.
+    default: op
+  moderacionx.clearx.exento:
+    description: A quien tenga esto no se le borra el chat.
+    default: false
+  moderacionx.efectos:
+    description: Abrir el menu de /efectos.
+    default: op
+  moderacionx.efectos.otros:
+    description: Aplicar efectos a otros jugadores.
+    default: op
+  moderacionx.efectos.todos:
+    description: Aplicar efectos a todo el servidor a la vez.
     default: op
   moderacionx.notificaciones:
     description: Recibe las notificaciones de sanciones del staff.

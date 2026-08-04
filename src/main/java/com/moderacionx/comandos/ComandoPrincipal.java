@@ -26,7 +26,7 @@ public final class ComandoPrincipal extends ComandoBase {
         }
         if (argumentos.length == 0) {
             cabecera(emisor);
-            uso(emisor, "/mx <recargar|info|vpn|version>");
+            uso(emisor, "/mx <recargar|info|vpn|efectos|version>");
             return;
         }
 
@@ -34,8 +34,9 @@ public final class ComandoPrincipal extends ComandoBase {
             case "recargar", "reload", "rl" -> recargar(emisor);
             case "info" -> info(emisor, argumentos);
             case "vpn", "antivpn" -> vpn(emisor, argumentos);
+            case "efectos" -> listarEfectos(emisor);
             case "version", "ver" -> cabecera(emisor);
-            default -> uso(emisor, "/mx <recargar|info|vpn|version>");
+            default -> uso(emisor, "/mx <recargar|info|vpn|efectos|version>");
         }
     }
 
@@ -102,6 +103,18 @@ public final class ComandoPrincipal extends ComandoBase {
         });
     }
 
+    /** Lista los efectos que ve el menu de /efectos, util para revisar los nombres del config. */
+    private void listarEfectos(CommandSender emisor) {
+        var tipos = plugin.efectos().tipos();
+        List<String> nombres = new java.util.ArrayList<>();
+        for (var tipo : tipos) {
+            nombres.add(plugin.efectos().nombreDe(tipo));
+        }
+        plugin.mensajes().enviar(emisor, "admin.efectos", Ph.de()
+                .con("cantidad", tipos.size())
+                .con("lista", String.join(", ", nombres)));
+    }
+
     private void vpn(CommandSender emisor, String[] argumentos) {
         if (argumentos.length < 2) {
             uso(emisor, "/mx vpn <check|whitelist|cache> ...");
@@ -159,7 +172,7 @@ public final class ComandoPrincipal extends ComandoBase {
     @Override
     protected List<String> completar(CommandSender emisor, String etiqueta, String[] argumentos) {
         if (argumentos.length == 1) {
-            return filtrar(List.of("recargar", "info", "vpn", "version"), argumentos[0]);
+            return filtrar(List.of("recargar", "info", "vpn", "efectos", "version"), argumentos[0]);
         }
         if (argumentos.length == 2 && "vpn".equalsIgnoreCase(argumentos[0])) {
             return filtrar(List.of("check", "whitelist", "cache"), argumentos[1]);
