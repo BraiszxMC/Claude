@@ -109,7 +109,7 @@ public final class GestorEspias {
 
     /** ¿Este emisor debe quedar fuera del espia? */
     public boolean exento(CommandSender emisor) {
-        return emisor.hasPermission("moderacionx.exento.spy");
+        return emisor.hasPermission("mx.exento.spy");
     }
 
     private String raiz(String linea) {

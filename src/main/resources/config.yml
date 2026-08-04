@@ -36,7 +36,7 @@ sanciones:
   permitir-offline: true
   # Impedir que el staff se sancione a si mismo
   bloquear-auto-sancion: true
-  # Si el objetivo tiene el permiso moderacionx.exento.<tipo> no se le puede sancionar
+  # Si el objetivo tiene el permiso mx.exento.<tipo> no se le puede sancionar
   respetar-exenciones: true
   # Al banear a un jugador, banear tambien su ultima IP
   banear-ip-al-banear: false
@@ -61,7 +61,7 @@ chat:
   lineas: 100
   # Anunciar quien ha limpiado el chat
   anunciar: true
-  # Los que tengan moderacionx.clearx.exento no ven su chat borrado
+  # Los que tengan mx.exento.chat no ven su chat borrado
   respetar-exentos: true
 
 efectos:
@@ -76,11 +76,13 @@ efectos:
   particulas-por-defecto: true
   # Limites
   duracion-maxima: 86400
-  nivel-maximo: 10
+  # Nivel maximo que se puede elegir en el menu (el juego admite hasta 255)
+  nivel-maximo: 255
   permitir-permanente: true
-  # Cuanto suman o restan los botones de duracion (en segundos)
+  # Cuanto suman o restan los botones. Con SHIFT los saltos son x10.
   incremento-corto: 10
   incremento-largo: 60
+  incremento-nivel: 1
   # Cerrar el menu al aplicar el efecto
   cerrar-al-aplicar: true
   # Nombres de jugador que se listan en los mensajes antes de resumir con (+N)
@@ -150,6 +152,90 @@ efectos:
     oozing: 'Rezumante'
     infested: 'Infestado'
 
+fly:
+  # Velocidad de vuelo (0.1 es la normal, 1.0 el maximo)
+  velocidad: 0.1
+  # Empezar a volar directamente al activarlo
+  despegar-al-activar: false
+  # Recordar quien volaba y devolverselo al reconectar o cambiar de mundo
+  recordar: true
+  # Mundos donde no se puede volar
+  mundos-prohibidos: []
+
+items:
+  # /customitem - editor de items
+  titulo-principal: '<dark_gray>Editor de items'
+  titulo-encantamientos: '<dark_gray>Encantamientos <gray>(%pagina%/%paginas%) <dark_gray>· nivel <white>%nivel%'
+  # Nivel con el que se abre el menu y tope permitido.
+  # Minecraft guarda el nivel como numero corto, 255 es lo sensato.
+  nivel-por-defecto: 255
+  nivel-maximo: 255
+  # Cuanto suman los botones. Con SHIFT usan el incremento largo.
+  incremento-corto: 1
+  incremento-largo: 10
+  materiales:
+    relleno: 'GRAY_STAINED_GLASS_PANE'
+    anterior: 'ARROW'
+    siguiente: 'ARROW'
+    volver: 'OAK_DOOR'
+    cerrar: 'BARRIER'
+    encantar: 'ENCHANTED_BOOK'
+    encantamiento: 'ENCHANTED_BOOK'
+    nombre: 'NAME_TAG'
+    lore: 'PAPER'
+    lore-limpiar: 'SHEARS'
+    irrompible: 'ANVIL'
+    flags: 'GLASS'
+    desencantar: 'GRINDSTONE'
+    nivel: 'EXPERIENCE_BOTTLE'
+    mas: 'LIME_STAINED_GLASS_PANE'
+    menos: 'RED_STAINED_GLASS_PANE'
+    sin-item: 'BARRIER'
+  # Nombres propios de los encantamientos
+  nombres:
+    sharpness: 'Filo'
+    smite: 'Golpeo'
+    bane_of_arthropods: 'Perdicion de los artropodos'
+    knockback: 'Empuje'
+    fire_aspect: 'Aspecto igneo'
+    looting: 'Botin'
+    sweeping_edge: 'Filo de barrido'
+    efficiency: 'Eficiencia'
+    silk_touch: 'Toque de seda'
+    unbreaking: 'Irrompibilidad'
+    fortune: 'Fortuna'
+    power: 'Poder'
+    punch: 'Retroceso'
+    flame: 'Fuego'
+    infinity: 'Infinidad'
+    luck_of_the_sea: 'Suerte marina'
+    lure: 'Atraccion'
+    loyalty: 'Lealtad'
+    impaling: 'Empalamiento'
+    riptide: 'Propulsion acuatica'
+    channeling: 'Canalizacion'
+    multishot: 'Multidisparo'
+    quick_charge: 'Carga rapida'
+    piercing: 'Perforacion'
+    density: 'Densidad'
+    breach: 'Brecha'
+    wind_burst: 'Rafaga de viento'
+    mending: 'Reparacion'
+    vanishing_curse: 'Maldicion de desaparicion'
+    binding_curse: 'Maldicion de vinculacion'
+    protection: 'Proteccion'
+    fire_protection: 'Proteccion contra el fuego'
+    feather_falling: 'Caida de pluma'
+    blast_protection: 'Proteccion contra explosiones'
+    projectile_protection: 'Proteccion contra proyectiles'
+    respiration: 'Respiracion'
+    aqua_affinity: 'Afinidad acuatica'
+    thorns: 'Espinas'
+    depth_strider: 'Agilidad acuatica'
+    frost_walker: 'Paso helado'
+    soul_speed: 'Velocidad de almas'
+    swift_sneak: 'Sigilo veloz'
+
 historial:
   # Sanciones mostradas por pagina en /historial
   lineas-por-pagina: 8
@@ -181,7 +267,7 @@ antivpn:
     - '192.168.*'
   # Nombres exactos que nunca se comprueban
   jugadores-whitelist: []
-  # Los jugadores con moderacionx.antivpn.bypass quedan exentos automaticamente
+  # Los jugadores con mx.bypass.antivpn quedan exentos automaticamente
   # (se recuerda su UUID tras su primera conexion)
   recordar-bypass: true
   # Proveedores consultados en orden hasta obtener una respuesta valida.
@@ -345,6 +431,12 @@ ayuda:
     - comando: '/efectos [jugador]'
       descripcion: 'Menu de efectos de pociones'
       permiso: 'moderacionx.efectos'
+    - comando: '/fly [jugador]'
+      descripcion: 'Activar o desactivar el vuelo'
+      permiso: 'moderacionx.fly'
+    - comando: '/customitem'
+      descripcion: 'Editor de items y encantamientos'
+      permiso: 'moderacionx.items'
     - comando: '/mx recargar'
       descripcion: 'Recargar la configuracion'
       permiso: 'moderacionx.admin'

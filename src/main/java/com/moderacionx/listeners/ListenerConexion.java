@@ -100,7 +100,7 @@ public final class ListenerConexion implements Listener {
     public void alEntrar(PlayerJoinEvent evento) {
         Player jugador = evento.getPlayer();
         plugin.antivpn().recordarBypass(jugador.getUniqueId(),
-                jugador.hasPermission("moderacionx.antivpn.bypass"));
+                jugador.hasPermission("mx.bypass.antivpn"));
     }
 
     @EventHandler(priority = EventPriority.MONITOR)
@@ -110,5 +110,6 @@ public final class ListenerConexion implements Listener {
         plugin.invsee().olvidar(uuid);
         plugin.secretos().limpiar(uuid);
         plugin.efectos().olvidar(uuid);
+        plugin.items().olvidar(uuid);
     }
 }

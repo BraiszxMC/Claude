@@ -10,9 +10,11 @@ import com.moderacionx.comandos.ComandoBan;
 import com.moderacionx.comandos.ComandoBanIP;
 import com.moderacionx.comandos.ComandoClear;
 import com.moderacionx.comandos.ComandoEfectos;
+import com.moderacionx.comandos.ComandoFly;
 import com.moderacionx.comandos.ComandoGM;
 import com.moderacionx.comandos.ComandoHistorial;
 import com.moderacionx.comandos.ComandoInvsee;
+import com.moderacionx.comandos.ComandoItems;
 import com.moderacionx.comandos.ComandoKick;
 import com.moderacionx.comandos.ComandoMute;
 import com.moderacionx.comandos.ComandoPrincipal;
@@ -25,12 +27,16 @@ import com.moderacionx.config.Ajustes;
 import com.moderacionx.config.Mensajes;
 import com.moderacionx.efectos.GestorEfectos;
 import com.moderacionx.espia.GestorEspias;
+import com.moderacionx.fly.GestorFly;
+import com.moderacionx.items.GestorItems;
 import com.moderacionx.invsee.GestorInvsee;
 import com.moderacionx.listeners.ListenerChat;
 import com.moderacionx.listeners.ListenerComandos;
 import com.moderacionx.listeners.ListenerConexion;
 import com.moderacionx.listeners.ListenerEfectos;
 import com.moderacionx.listeners.ListenerEspia;
+import com.moderacionx.listeners.ListenerFly;
+import com.moderacionx.listeners.ListenerItems;
 import com.moderacionx.listeners.ListenerInventario;
 import com.moderacionx.listeners.ListenerSecretos;
 import com.moderacionx.sanciones.GestorSanciones;
@@ -63,6 +69,8 @@ public final class ModeracionX extends JavaPlugin {
     private GestorSecretos secretos;
     private GestorInvsee invsee;
     private GestorEfectos efectos;
+    private GestorFly fly;
+    private GestorItems items;
     private BukkitTask tareaRevision;
 
     @Override
@@ -80,6 +88,8 @@ public final class ModeracionX extends JavaPlugin {
         secretos = new GestorSecretos(this);
         invsee = new GestorInvsee(this);
         efectos = new GestorEfectos(this);
+        fly = new GestorFly(this);
+        items = new GestorItems(this);
 
         registrarComandos();
         registrarListeners();
@@ -153,6 +163,8 @@ public final class ModeracionX extends JavaPlugin {
         registrar("anuncio", new ComandoAnuncio(this));
         registrar("clearx", new ComandoClear(this));
         registrar("efectos", new ComandoEfectos(this));
+        registrar("fly", new ComandoFly(this));
+        registrar("customitem", new ComandoItems(this));
         registrar("help", new ComandoAyuda(this));
     }
 
@@ -175,6 +187,8 @@ public final class ModeracionX extends JavaPlugin {
         gestor.registerEvents(new ListenerEspia(this), this);
         gestor.registerEvents(new ListenerInventario(this), this);
         gestor.registerEvents(new ListenerEfectos(this), this);
+        gestor.registerEvents(new ListenerItems(this), this);
+        gestor.registerEvents(new ListenerFly(this), this);
     }
 
     private void programarRevision() {
@@ -285,5 +299,13 @@ public final class ModeracionX extends JavaPlugin {
 
     public GestorEfectos efectos() {
         return efectos;
+    }
+
+    public GestorFly fly() {
+        return fly;
+    }
+
+    public GestorItems items() {
+        return items;
     }
 }

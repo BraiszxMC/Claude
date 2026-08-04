@@ -99,6 +99,11 @@ public final class SesionEfectos {
         nivel = Math.max(1, Math.min(maximo, nivel + cantidad));
     }
 
+    /** Fija el nivel directamente (botones de minimo y maximo). */
+    public void nivel(int valor) {
+        this.nivel = Math.max(1, valor);
+    }
+
     public boolean particulas() {
         return particulas;
     }

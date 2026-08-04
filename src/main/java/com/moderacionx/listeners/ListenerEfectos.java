@@ -53,7 +53,7 @@ public final class ListenerEfectos implements Listener {
             case EFECTOS -> pantallaEfectos(staff, sesion, slot, evento.isRightClick());
             case OBJETIVOS -> pantallaObjetivos(staff, sesion, slot);
             case JUGADORES -> pantallaJugadores(staff, sesion, slot);
-            case AJUSTES -> pantallaAjustes(staff, sesion, slot);
+            case AJUSTES -> pantallaAjustes(staff, sesion, slot, evento.isShiftClick(), evento.isRightClick());
         }
     }
 
@@ -180,7 +180,7 @@ public final class ListenerEfectos implements Listener {
         }
     }
 
-    private void pantallaAjustes(Player staff, SesionEfectos sesion, int slot) {
+    private void pantallaAjustes(Player staff, SesionEfectos sesion, int slot, boolean shift, boolean derecho) {
         GestorEfectos efectos = plugin.efectos();
         var configuracion = plugin.ajustes().raiz();
         int corto = configuracion.getInt("efectos.incremento-corto", 10);
@@ -188,13 +188,18 @@ public final class ListenerEfectos implements Listener {
         int duracionMaxima = configuracion.getInt("efectos.duracion-maxima", 86400);
         int nivelMaximo = configuracion.getInt("efectos.nivel-maximo", 10);
 
+        // con shift los botones saltan de 10 en 10
+        int factor = shift ? 10 : 1;
+        int pasoNivel = plugin.ajustes().raiz().getInt("efectos.incremento-nivel", 1) * factor;
+
         switch (slot) {
-            case GestorEfectos.SLOT_DUR_MENOS_LARGO -> sesion.sumarDuracion(-largo, duracionMaxima);
-            case GestorEfectos.SLOT_DUR_MENOS_CORTO -> sesion.sumarDuracion(-corto, duracionMaxima);
-            case GestorEfectos.SLOT_DUR_MAS_CORTO -> sesion.sumarDuracion(corto, duracionMaxima);
-            case GestorEfectos.SLOT_DUR_MAS_LARGO -> sesion.sumarDuracion(largo, duracionMaxima);
-            case GestorEfectos.SLOT_NIVEL_MENOS -> sesion.sumarNivel(-1, nivelMaximo);
-            case GestorEfectos.SLOT_NIVEL_MAS -> sesion.sumarNivel(1, nivelMaximo);
+            case GestorEfectos.SLOT_DUR_MENOS_LARGO -> sesion.sumarDuracion(-largo * factor, duracionMaxima);
+            case GestorEfectos.SLOT_DUR_MENOS_CORTO -> sesion.sumarDuracion(-corto * factor, duracionMaxima);
+            case GestorEfectos.SLOT_DUR_MAS_CORTO -> sesion.sumarDuracion(corto * factor, duracionMaxima);
+            case GestorEfectos.SLOT_DUR_MAS_LARGO -> sesion.sumarDuracion(largo * factor, duracionMaxima);
+            case GestorEfectos.SLOT_NIVEL_MENOS -> sesion.sumarNivel(-pasoNivel, nivelMaximo);
+            case GestorEfectos.SLOT_NIVEL_MAS -> sesion.sumarNivel(pasoNivel, nivelMaximo);
+            case GestorEfectos.SLOT_NIVEL_INFO -> sesion.nivel(derecho ? 1 : nivelMaximo);
             case GestorEfectos.SLOT_PARTICULAS -> sesion.alternarParticulas();
             case GestorEfectos.SLOT_PERMANENTE -> {
                 if (!configuracion.getBoolean("efectos.permitir-permanente", true)) {

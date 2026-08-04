@@ -231,8 +231,11 @@ public final class GestorEfectos {
 
         vista.setItem(SLOT_NIVEL_MENOS, item(material("menos", Material.RED_STAINED_GLASS_PANE), "item-menos",
                 Ph.de("cantidad", "1")));
-        vista.setItem(SLOT_NIVEL_INFO, item(material("nivel", Material.GLOWSTONE_DUST), "item-nivel",
-                Ph.de("nivel", sesion.nivel())));
+        ItemStack infoNivel = item(material("nivel", Material.GLOWSTONE_DUST), "item-nivel", Ph.de()
+                .con("nivel", sesion.nivel())
+                .con("maximo", config().getInt("efectos.nivel-maximo", 255)));
+        infoNivel.setAmount(Math.max(1, Math.min(64, sesion.nivel())));
+        vista.setItem(SLOT_NIVEL_INFO, infoNivel);
         vista.setItem(SLOT_NIVEL_MAS, item(material("mas", Material.LIME_STAINED_GLASS_PANE), "item-mas",
                 Ph.de("cantidad", "1")));
 

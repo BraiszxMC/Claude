@@ -405,6 +405,6 @@ public final class GestorSanciones {
         }
         Player jugador = Bukkit.getPlayer(objetivo.uuid());
         return jugador != null
-                && jugador.hasPermission("moderacionx.exento." + tipo.name().toLowerCase(Locale.ROOT));
+                && jugador.hasPermission("mx.exento." + tipo.name().toLowerCase(Locale.ROOT));
     }
 }

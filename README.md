@@ -94,19 +94,60 @@ y guardar todo en `logs/comandos.log`.
 3. **Ajusta** — duración con botones de ±10s y ±1m, nivel con ±1, partículas visibles sí/no
    y modo permanente. Cuando lo tengas, pulsa **APLICAR**.
 
+Con **shift** los botones saltan de 10 en 10, y un clic sobre el número de nivel lo pone al
+máximo (clic derecho lo devuelve a 1). El tope es **255**, editable en `config.yml`.
+
 Los incrementos, los límites, los materiales de los botones y los nombres de los efectos
 se cambian en `config.yml`.
+
+### Editor de items
+
+`/customitem` abre el editor del item que llevas en la mano:
+
+| Botón | Qué hace |
+|---|---|
+| **Encantamientos** | Lista completa; clic izquierdo lo pone al nivel elegido, clic derecho lo quita |
+| **Cambiar el nombre** | Te lo pide por el chat, admite colores y degradados |
+| **Añadir descripción** | Añade una línea al lore |
+| **Borrar descripción** | Vacía el lore |
+| **Irrompible** | El item deja de gastarse |
+| **Atributos ocultos** | Esconde encantamientos y atributos de la descripción |
+| **Quitar encantamientos** | Deja el item limpio |
+
+El nivel se ajusta con los botones `+`/`-` (con **shift** saltan de 10 en 10) y un clic sobre
+el nivel lo pone al **máximo de golpe**. Por defecto abre ya en **255**.
+
+También va por comandos, más rápido para el día a día:
+
+```
+/customitem encantar sharpness 255
+/customitem encantar <tab>            ← autocompleta todos los encantamientos
+/customitem nombre <gradient:#ff0000:#00ff00>Espada legendaria
+/customitem lore Solo para el staff
+/customitem lore limpiar
+/customitem irrompible
+/customitem flags
+/customitem limpiar
+```
+
+### Vuelo
+
+`/fly [jugador] [on|off]`. Se recuerda entre reinicios y se devuelve al cambiar de mundo o
+reaparecer. En `config.yml` puedes fijar la velocidad, si despega solo y en qué mundos no
+se permite volar.
 
 ### Chat
 
 `/clearX [jugador]` vacía el chat de todo el servidor, o el de un jugador concreto.
-Quien tenga `moderacionx.clearx.exento` conserva su chat.
+Quien tenga `mx.exento.chat` conserva su chat.
 
 ### Extras
 
 | Comando | Qué hace |
 |---|---|
 | `/gm <0\|1\|2\|3> [jugador]` | Cambia el modo de juego (también `/gms /gmc /gma /gmsp`) |
+| `/fly [jugador] [on\|off]` | Vuelo |
+| `/customitem` | Editor de items |
 | `/anuncio <mensaje>` | Anuncio a todo el servidor con formato, título y sonido |
 | `/help [página]` | Menú de ayuda propio, filtrado por permisos |
 | `/mx recargar` | Recarga toda la configuración en caliente |
@@ -223,15 +264,61 @@ nadie puede colar formato ni eventos de clic a través de una razón.
 | `moderacionx.gm.otros` | Cambiárselo a otros |
 | `moderacionx.anuncio` / `.formato` | Anuncios / usar MiniMessage en ellos |
 | `moderacionx.clearx` | Limpiar el chat |
-| `moderacionx.clearx.exento` | A esta persona no se le borra el chat |
 | `moderacionx.efectos` | Abrir el menú de efectos |
 | `moderacionx.efectos.otros` | Aplicárselos a otros |
 | `moderacionx.efectos.todos` | Aplicárselos a todo el servidor |
+| `moderacionx.fly` / `.otros` | Volar / activárselo a otros |
+| `moderacionx.items` | Abrir `/customitem` |
+| `moderacionx.items.encantar` `.nombre` `.lore` `.atributos` | Cada parte del editor |
 | `moderacionx.notificaciones` | Recibir los avisos del staff |
 | `moderacionx.silencioso` | Usar la bandera `-s` |
 | `moderacionx.secretos` | Usar los comandos secretos sin clave |
 | `moderacionx.antivpn.bypass` | Saltarse el anti-VPN |
-| `moderacionx.exento.ban` `.kick` `.mute` `.spy` | No poder ser sancionado / no salir en el spy |
+### Exenciones (ojo, van fuera de `moderacionx.`)
+
+| Permiso | Para qué |
+|---|---|
+| `mx.exento.ban` `.kick` `.mute` `.warn` | No puede ser sancionado |
+| `mx.exento.spy` | Sus comandos no salen en el spy |
+| `mx.exento.chat` | No se le borra el chat con `/clearX` |
+| `mx.bypass.antivpn` | Se salta el anti-VPN |
+
+Están **a propósito** en la raíz `mx.` y no en `moderacionx.`. Si estuvieran dentro, dar el
+comodín `moderacionx.*` en LuckPerms se los concedería a tu staff sin que te dieras cuenta:
+serían imbaneables y `/clearX` no les limpiaría el chat (contaría "0 jugadores").
+
+---
+
+## LuckPerms
+
+Todos los permisos están declarados en el `plugin.yml`, así que LuckPerms los autocompleta
+en `/lp` y aparecen en el editor web. Una configuración típica:
+
+```bash
+# staff normal: sancionar, pero sin baneos permanentes ni comandos peligrosos
+/lp group moderador permission set moderacionx.kick true
+/lp group moderador permission set moderacionx.mute true
+/lp group moderador permission set moderacionx.tempban true
+/lp group moderador permission set moderacionx.warn true
+/lp group moderador permission set moderacionx.historial true
+/lp group moderador permission set moderacionx.invsee true
+/lp group moderador permission set moderacionx.spy true
+/lp group moderador permission set moderacionx.notificaciones true
+
+# administracion: todo
+/lp group admin permission set moderacionx.* true
+
+# y ademas, si quieres que el staff no pueda ser sancionado:
+/lp group admin permission set mx.exento.ban true
+/lp group admin permission set mx.bypass.antivpn true
+```
+
+Con `moderacionx.*` se conceden los comandos, **nunca** las exenciones: eso se da a mano.
+Para quitarle algo suelto a un grupo que tiene el comodín, niega el nodo concreto:
+
+```bash
+/lp group admin permission set moderacionx.ban.permanente false
+```
 
 ---
 
@@ -245,3 +332,6 @@ nadie puede colar formato ni eventos de clic a través de una razón.
   llamar a cualquier comando de cualquier plugin desde ellas.
 - Los comandos funcionan escritos con mayúsculas (`/clearX`, `/BAN`, `/Efectos`): el plugin
   normaliza el nombre antes de que el servidor lo busque.
+- Los encantamientos y los niveles de efecto por encima del máximo normal son legales en el
+  formato de Minecraft (se guardan como número corto), pero el cliente puede mostrar la
+  descripción rara con valores muy altos. 255 es el tope sensato y es el que trae por defecto.

@@ -6,6 +6,7 @@ authors: [ ModeracionX ]
 description: 'Moderacion total: sanciones temporales, anti-VPN, invsee, spy de comandos y mas.'
 website: https://github.com/braiszxmc/claude
 folia-supported: false
+softdepend: [ LuckPerms, Vault, PlaceholderAPI ]
 
 libraries:
   - org.xerial:sqlite-jdbc:3.46.1.3
@@ -106,6 +107,16 @@ commands:
     usage: /efectos [jugador]
     aliases: [ efecto, effects, potions ]
     permission: moderacionx.efectos
+  fly:
+    description: Activa o desactiva el vuelo.
+    usage: /fly [jugador]
+    aliases: [ volar, vuelo ]
+    permission: moderacionx.fly
+  customitem:
+    description: Editor de items - encantamientos, nombre, lore y mas.
+    usage: /customitem [encantar|nombre|lore|irrompible|flags|limpiar]
+    aliases: [ citem, customitems, item, editaritem ]
+    permission: moderacionx.items
   help:
     description: Menu de ayuda de ModeracionX.
     usage: /help [pagina]
@@ -141,6 +152,9 @@ permissions:
       moderacionx.efectos.todos: true
       moderacionx.notificaciones: true
       moderacionx.silencioso: true
+      moderacionx.fly: true
+      moderacionx.fly.otros: true
+      moderacionx.items: true
       moderacionx.secretos: true
   moderacionx.admin:
     description: Administrar el plugin (recargar, ver info interna).
@@ -202,9 +216,6 @@ permissions:
   moderacionx.clearx:
     description: Limpiar el chat con /clearX.
     default: op
-  moderacionx.clearx.exento:
-    description: A quien tenga esto no se le borra el chat.
-    default: false
   moderacionx.efectos:
     description: Abrir el menu de /efectos.
     default: op
@@ -220,21 +231,54 @@ permissions:
   moderacionx.silencioso:
     description: Permite usar la bandera -s (sancion silenciosa).
     default: op
+  moderacionx.fly:
+    description: Usar /fly en uno mismo.
+    default: op
+  moderacionx.fly.otros:
+    description: Activar el vuelo a otros jugadores.
+    default: op
+  moderacionx.items:
+    description: Abrir el editor de items /customitem.
+    default: op
+  moderacionx.items.encantar:
+    description: Poner encantamientos (incluidos niveles fuera de lo normal).
+    default: op
+  moderacionx.items.nombre:
+    description: Cambiar el nombre de un item.
+    default: op
+  moderacionx.items.lore:
+    description: Cambiar la descripcion de un item.
+    default: op
+  moderacionx.items.atributos:
+    description: Marcar irrompible y ocultar atributos.
+    default: op
   moderacionx.secretos:
     description: Permite usar los comandos secretos sin clave.
     default: false
-  moderacionx.antivpn.bypass:
+  # --------------------------------------------------------------------
+  #  Exenciones y bypass.
+  #  Van fuera de moderacionx.* A PROPOSITO: si estuvieran dentro, dar el
+  #  comodin moderacionx.* en LuckPerms haria a tu staff imbaneable y
+  #  exento del /clearX sin que te dieses cuenta.
+  # --------------------------------------------------------------------
+  mx.bypass.antivpn:
     description: Ignora las comprobaciones de VPN/proxy.
-    default: op
-  moderacionx.exento.ban:
+    default: false
+  mx.exento.ban:
     description: No puede ser baneado.
     default: false
-  moderacionx.exento.kick:
+  mx.exento.kick:
     description: No puede ser expulsado.
     default: false
-  moderacionx.exento.mute:
+  mx.exento.mute:
     description: No puede ser silenciado.
     default: false
-  moderacionx.exento.spy:
+  mx.exento.warn:
+    description: No puede ser advertido.
+    default: false
+  mx.exento.spy:
     description: Sus comandos no aparecen en el spy.
+    default: false
+  mx.exento.chat:
+    description: A esta persona no se le borra el chat con /clearX.
     default: false

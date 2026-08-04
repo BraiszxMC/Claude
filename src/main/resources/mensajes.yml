@@ -179,6 +179,119 @@ gamemode:
 anuncio:
   enviado: '%prefijo%<green>Anuncio enviado.'
 
+fly:
+  activado: '%prefijo%<green>Vuelo <bold>activado<reset><green>.'
+  desactivado: '%prefijo%<red>Vuelo <bold>desactivado<reset><red>.'
+  activado-otro: '%prefijo%<green>Has activado el vuelo a <white>%jugador%<green>.'
+  desactivado-otro: '%prefijo%<red>Has desactivado el vuelo a <white>%jugador%<red>.'
+  mundo-prohibido: '%prefijo%<red>No se puede volar en <white>%mundo%<red>.'
+
+items:
+  sin-item: '%prefijo%<red>Tienes que tener un item en la mano.'
+  encantado: '%prefijo%<green>Puesto <white>%encantamiento% %nivel%<green>.'
+  encantamiento-quitado: '%prefijo%<red>Quitado <white>%encantamiento%<red>.'
+  encantamientos-quitados: '%prefijo%<red>Quitados todos los encantamientos.'
+  encantamiento-desconocido: '%prefijo%<red>No existe el encantamiento <white>%encantamiento%<red>.'
+  nombre-puesto: '%prefijo%<green>Nombre cambiado a <reset>%texto%<green>.'
+  nombre-quitado: '%prefijo%<green>Nombre original restaurado.'
+  lore-anadido: '%prefijo%<green>Linea anadida a la descripcion.'
+  lore-limpiado: '%prefijo%<green>Descripcion borrada.'
+  irrompible-si: '%prefijo%<green>El item ahora es irrompible.'
+  irrompible-no: '%prefijo%<red>El item vuelve a gastarse.'
+  flags-si: '%prefijo%<green>Atributos y encantamientos ocultos.'
+  flags-no: '%prefijo%<green>Atributos y encantamientos visibles.'
+  cancelado: '%prefijo%<gray>Cancelado.'
+  pide-nombre:
+    - '%prefijo%<yellow>Escribe en el chat el nuevo nombre del item.'
+    - '<gray>Admite colores y degradados con formato MiniMessage.'
+    - '<gray>Escribe <white>cancelar <gray>para salir, o <white>quitar <gray>para dejarlo sin nombre.'
+  pide-lore:
+    - '%prefijo%<yellow>Escribe en el chat la linea que quieres anadir.'
+    - '<gray>Escribe <white>cancelar <gray>para salir.'
+
+  item-sin-item:
+    nombre: '<red><bold>No llevas nada en la mano'
+    lore:
+      - '<gray>Coge un item y vuelve a abrir el menu.'
+  item-encantar:
+    nombre: '<light_purple><bold>Encantamientos'
+    lore:
+      - '<gray>Pon cualquier encantamiento'
+      - '<gray>al nivel que quieras.'
+  item-nombre:
+    nombre: '<yellow><bold>Cambiar el nombre'
+    lore:
+      - '<gray>Te lo pedira por el chat.'
+  item-lore:
+    nombre: '<yellow><bold>Anadir descripcion'
+    lore:
+      - '<gray>Anade una linea al item.'
+  item-lore-limpiar:
+    nombre: '<red><bold>Borrar descripcion'
+    lore:
+      - '<gray>Quita todas las lineas.'
+  item-irrompible-si:
+    nombre: '<green><bold>Irrompible: SI'
+    lore:
+      - '<gray>El item no se gasta.'
+      - '<yellow>Clic para quitarlo.'
+  item-irrompible-no:
+    nombre: '<gray><bold>Irrompible: NO'
+    lore:
+      - '<gray>El item se gasta con el uso.'
+      - '<yellow>Clic para hacerlo irrompible.'
+  item-flags-si:
+    nombre: '<green><bold>Atributos ocultos'
+    lore:
+      - '<gray>No se ven encantamientos ni atributos.'
+      - '<yellow>Clic para mostrarlos.'
+  item-flags-no:
+    nombre: '<gray><bold>Atributos visibles'
+    lore:
+      - '<gray>Se ve todo en la descripcion.'
+      - '<yellow>Clic para ocultarlos.'
+  item-desencantar:
+    nombre: '<red><bold>Quitar encantamientos'
+    lore:
+      - '<gray>Deja el item limpio.'
+  item-encantamiento:
+    nombre: '<light_purple>%encantamiento%'
+    lore:
+      - '<dark_gray>%clave%'
+      - '<gray>En el item: <white>%actual%'
+      - '<gray>Maximo normal: <white>%vanilla%'
+      - ''
+      - '<gray>Clic izquierdo <dark_gray>» <white>poner a nivel %nivel%'
+      - '<gray>Clic derecho <dark_gray>» <white>quitar'
+  item-nivel:
+    nombre: '<aqua><bold>Nivel %nivel%'
+    lore:
+      - '<gray>Se aplicara a este nivel.'
+      - '<gray>Maximo: <white>%maximo%'
+      - ''
+      - '<gray>Clic izquierdo <dark_gray>» <white>poner el maximo'
+      - '<gray>Clic derecho <dark_gray>» <white>volver a 1'
+  item-mas:
+    nombre: '<green>+ %cantidad%'
+    lore:
+      - '<gray>Con SHIFT sube de 10 en 10.'
+  item-menos:
+    nombre: '<red>- %cantidad%'
+    lore:
+      - '<gray>Con SHIFT baja de 10 en 10.'
+  item-anterior:
+    nombre: '<yellow>« Pagina anterior'
+    lore: []
+  item-siguiente:
+    nombre: '<yellow>Pagina siguiente »'
+    lore: []
+  item-volver:
+    nombre: '<yellow>« Volver'
+    lore: []
+  item-cerrar:
+    nombre: '<red>Cerrar'
+    lore: []
+
 chat:
   anuncio: '%prefijo%<gray>El chat ha sido limpiado por <white>%autor%<gray>.'
   limpiado: '%prefijo%<green>Chat limpiado a <white>%cantidad% <green>jugadores.'
@@ -245,15 +358,20 @@ efectos:
     lore:
       - '<gray>Actual: <white>%duracion%'
   item-nivel:
-    nombre: '<light_purple><bold>Nivel'
+    nombre: '<light_purple><bold>Nivel %nivel%'
     lore:
-      - '<gray>Actual: <white>%nivel%'
+      - '<gray>Maximo: <white>%maximo%'
+      - ''
+      - '<gray>Clic izquierdo <dark_gray>» <white>poner el maximo'
+      - '<gray>Clic derecho <dark_gray>» <white>volver a 1'
   item-mas:
     nombre: '<green>+ %cantidad%'
-    lore: []
+    lore:
+      - '<gray>Con SHIFT el salto es x10.'
   item-menos:
     nombre: '<red>- %cantidad%'
-    lore: []
+    lore:
+      - '<gray>Con SHIFT el salto es x10.'
   item-particulas-si:
     nombre: '<green><bold>Particulas visibles'
     lore:

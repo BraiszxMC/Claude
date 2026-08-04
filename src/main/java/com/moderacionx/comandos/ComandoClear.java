@@ -40,7 +40,7 @@ public final class ComandoClear extends ComandoBase {
         int limpiados = 0;
         for (Player jugador : Bukkit.getOnlinePlayers()) {
             if (configuracion.getBoolean("chat.respetar-exentos", true)
-                    && jugador.hasPermission("moderacionx.clearx.exento")) {
+                    && jugador.hasPermission("mx.exento.chat")) {
                 continue;
             }
             limpiar(jugador, vacia, lineas);

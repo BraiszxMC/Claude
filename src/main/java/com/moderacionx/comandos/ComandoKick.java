@@ -39,7 +39,7 @@ public final class ComandoKick extends ComandoSancion {
             plugin.mensajes().enviar(emisor, "general.auto-sancion");
             return;
         }
-        if (plugin.ajustes().respetarExenciones() && objetivo.hasPermission("moderacionx.exento.kick")) {
+        if (plugin.ajustes().respetarExenciones() && objetivo.hasPermission("mx.exento.kick")) {
             plugin.mensajes().enviar(emisor, "general.exento", Ph.de("jugador", objetivo.getName()));
             return;
         }
