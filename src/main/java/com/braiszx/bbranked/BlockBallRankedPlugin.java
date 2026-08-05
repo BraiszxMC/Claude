@@ -107,7 +107,23 @@ public final class BlockBallRankedPlugin extends JavaPlugin {
         }
 
         statsManager.refreshLeaderboard();
-        getLogger().info("BlockBallRanked activado con " + rankedConfig.modes().size() + " modo(s).");
+
+        if (rankedConfig.modes().isEmpty()) {
+            getLogger().severe("=================================================");
+            getLogger().severe(" No se ha cargado NINGUN modo de juego.");
+            if (getConfig().getKeys(false).isEmpty()) {
+                getLogger().severe(" El config.yml no se ha podido leer: revisa el");
+                getLogger().severe(" error de YAML de mas arriba en esta consola, o");
+                getLogger().severe(" borra el archivo para regenerarlo.");
+            } else {
+                getLogger().severe(" Falta la seccion 'modes' en el config.yml.");
+            }
+            getLogger().severe(" Hasta que se arregle, /ranked join no funciona.");
+            getLogger().severe("=================================================");
+        } else {
+            getLogger().info("BlockBallRanked activado con " + rankedConfig.modes().size()
+                    + " modo(s): " + String.join(", ", rankedConfig.modes().keySet()));
+        }
 
         // BlockBall carga sus arenas de forma asincrona, asi que la revision se
         // hace unos segundos despues de arrancar.

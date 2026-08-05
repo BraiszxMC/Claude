@@ -131,8 +131,23 @@ public final class MatchManager {
      */
     public List<String> validateArenas() {
         List<String> problems = new ArrayList<>();
-        GameService service = plugin.gameService();
 
+        // Lo primero: si no hay modos no hay ranked que valga, y el resto de
+        // comprobaciones no dirian nada util.
+        if (config.modes().isEmpty()) {
+            if (plugin.getConfig().getKeys(false).isEmpty()) {
+                problems.add("El config.yml no se ha podido leer (error de formato YAML)."
+                        + " Se estan usando los valores por defecto y NO hay ningun modo."
+                        + " Mira el error de la consola al arrancar, o borra el archivo"
+                        + " para que se genere de nuevo.");
+            } else {
+                problems.add("No hay ningun modo en la seccion 'modes' del config.yml."
+                        + " Sin modos no se puede entrar a ninguna cola.");
+            }
+            return problems;
+        }
+
+        GameService service = plugin.gameService();
         if (service == null) {
             problems.add("No se ha podido acceder al GameService de BlockBall.");
             return problems;

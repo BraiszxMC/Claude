@@ -74,6 +74,10 @@ public final class RankedMenu implements InventoryHolder {
 
         // Fila de modos, centrada.
         List<QueueMode> modes = new ArrayList<>(config.modes().values());
+        if (modes.isEmpty()) {
+            // Sin esto el menu sale medio vacio y no hay forma de saber por que.
+            inventory.setItem(13, noModesIcon());
+        }
         int start = Math.max(0, 10 + (7 - modes.size()) / 2);
         for (int i = 0; i < modes.size() && i < 7; i++) {
             QueueMode mode = modes.get(i);
@@ -148,6 +152,25 @@ public final class RankedMenu implements InventoryHolder {
             }
         }
         return named(item, "<green><bold>Party", lore);
+    }
+
+    /**
+     * Aviso de que no hay ningun modo cargado, con los pasos para arreglarlo.
+     */
+    private ItemStack noModesIcon() {
+        List<Component> lore = List.of(
+                plain("<gray>El plugin no ha cargado ningun modo."),
+                Component.empty(),
+                plain("<gray>Casi siempre es un error de formato en"),
+                plain("<white>plugins/BlockBallRanked/config.yml</white><gray>:"),
+                plain("<gray>si el YAML no se puede leer, se usan los"),
+                plain("<gray>valores por defecto y la lista de modos"),
+                plain("<gray>se queda vacia."),
+                Component.empty(),
+                plain("<yellow>1.</yellow> <gray>Mira la consola al arrancar."),
+                plain("<yellow>2.</yellow> <gray>Comprueba la seccion <white>modes:</white>"),
+                plain("<yellow>3.</yellow> <gray>Usa <white>/ranked check</white>"));
+        return named(new ItemStack(Material.BARRIER), "<red><bold>Sin modos configurados", lore);
     }
 
     private ItemStack leaveIcon() {
