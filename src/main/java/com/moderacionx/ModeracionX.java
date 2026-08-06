@@ -20,6 +20,7 @@ import com.moderacionx.comandos.ComandoMute;
 import com.moderacionx.comandos.ComandoPrincipal;
 import com.moderacionx.comandos.ComandoSit;
 import com.moderacionx.comandos.ComandoSpy;
+import com.moderacionx.comandos.ComandoSpyX;
 import com.moderacionx.comandos.ComandoUnban;
 import com.moderacionx.comandos.ComandoUnbanIP;
 import com.moderacionx.comandos.ComandoUnmute;
@@ -100,6 +101,7 @@ public final class ModeracionX extends JavaPlugin {
         registrarListeners();
         programarRevision();
         desactivarComandosVanilla();
+        espias.purgar();
 
         getLogger().info("ModeracionX v" + getPluginMeta().getVersion() + " activado.");
     }
@@ -114,6 +116,9 @@ public final class ModeracionX extends JavaPlugin {
         }
         if (sit != null) {
             sit.limpiarTodo();
+        }
+        if (espias != null) {
+            espias.volcar();
         }
         if (almacen != null) {
             almacen.cerrar();
@@ -167,6 +172,7 @@ public final class ModeracionX extends JavaPlugin {
         registrar("echest", inventario);
 
         registrar("spy", new ComandoSpy(this));
+        registrar("spyx", new ComandoSpyX(this));
         registrar("gm", new ComandoGM(this));
         registrar("anuncio", new ComandoAnuncio(this));
         registrar("clearx", new ComandoClear(this));
@@ -209,6 +215,7 @@ public final class ModeracionX extends JavaPlugin {
         tareaRevision = Bukkit.getScheduler().runTaskTimer(this, () -> {
             sanciones.revisarCaducadas();
             sit.revisar();
+            espias.volcar();
         }, periodo, periodo);
     }
 

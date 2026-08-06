@@ -78,10 +78,36 @@ Por defecto es **solo lectura**: hace falta `moderacionx.invsee.editar` para toc
 | `/spy` | Activa/desactiva el espía |
 | `/spy on\|off` | Forzar estado |
 | `/spy lista` | Ver quién está espiando |
+| `/spyX <texto>` | Buscar en el histórico de comandos |
 
 Muestra en directo los comandos de todos los jugadores. Se puede ignorar comandos,
 censurar los de contraseñas (`/login`, `/register`…), incluir la consola, incluir el chat
 y guardar todo en `logs/comandos.log`.
+
+### Buscar quién usó un comando
+
+`/spy` solo se ve en el momento. **`/spyX` busca en el histórico**: todo lo que se ha
+ejecutado queda guardado en la base de datos y se puede consultar cuando quieras.
+
+```
+/spyX attribute                  ← todo el que haya usado algo con "attribute"
+/spyX attribute jugador:Pepe     ← solo lo de Pepe
+/spyX attribute dias:7           ← solo la última semana
+/spyX * jugador:Pepe             ← todo lo que ha escrito Pepe
+/spyX op pagina:2
+```
+
+Los filtros `jugador:`, `dias:` y `pagina:` se combinan como quieras y van en cualquier
+orden. El texto busca dentro de la línea entera, así que `/spyX diamond` encuentra
+también `/give Pepe diamond_block 64`.
+
+Cada resultado trae la fecha, quién fue y, al pasar el ratón por encima, el comando
+completo con su mundo y su UUID. Al hacer clic se te copia al chat.
+
+Los comandos con contraseña se guardan **censurados**, igual que en el espía en directo.
+En `config.yml` se ajusta cuántos días se conservan (30 por defecto), si se registra la
+consola y qué comandos no se guardan nunca — de fábrica se excluyen las propias búsquedas
+para que no ensucien los resultados.
 
 ### Efectos
 
@@ -298,7 +324,8 @@ nadie puede colar formato ni eventos de clic a través de una razón.
 | `moderacionx.historial.propio` | Ver el propio (`true` por defecto) |
 | `moderacionx.invsee` `.echest` | Ver inventarios |
 | `moderacionx.invsee.editar` | Modificar el inventario que se está viendo |
-| `moderacionx.spy` | SpyCommands |
+| `moderacionx.spy` | SpyCommands en directo |
+| `moderacionx.spy.registro` | Buscar en el histórico con `/spyX` |
 | `moderacionx.gm` + `moderacionx.gm.0-3` | Modo de juego (hacen falta los dos) |
 | `moderacionx.gm.otros` | Cambiárselo a otros |
 | `moderacionx.anuncio` / `.formato` | Anuncios / usar MiniMessage en ellos |

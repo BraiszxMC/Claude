@@ -1,6 +1,7 @@
 package com.moderacionx.almacen;
 
 import com.moderacionx.ModeracionX;
+import com.moderacionx.espia.RegistroComando;
 import com.moderacionx.sanciones.Sancion;
 import com.moderacionx.sanciones.TipoSancion;
 import org.bukkit.configuration.ConfigurationSection;
@@ -21,6 +22,8 @@ public final class AlmacenYaml implements Almacen {
     private final ModeracionX plugin;
     private final File archivoSanciones;
     private final File archivoJugadores;
+    private final File archivoComandos;
+    private final List<RegistroComando> comandos = new ArrayList<>();
     private YamlConfiguration sanciones;
     private YamlConfiguration jugadores;
     private final AtomicLong siguienteId = new AtomicLong(1L);
@@ -29,6 +32,7 @@ public final class AlmacenYaml implements Almacen {
         this.plugin = plugin;
         this.archivoSanciones = new File(carpeta, "sanciones.yml");
         this.archivoJugadores = new File(carpeta, "jugadores.yml");
+        this.archivoComandos = new File(carpeta, "comandos.yml");
     }
 
     @Override
@@ -51,6 +55,7 @@ public final class AlmacenYaml implements Almacen {
             }
         }
         siguienteId.set(maximo + 1L);
+        cargarComandos();
         plugin.getLogger().info("Almacenamiento YAML listo (" + (raiz == null ? 0 : raiz.getKeys(false).size()) + " sanciones).");
     }
 
@@ -173,6 +178,120 @@ public final class AlmacenYaml implements Almacen {
             }
         }
         return Optional.empty();
+    }
+
+    // ------------------------------------------------- registro de comandos
+
+    @Override
+    public synchronized void registrarComandos(List<RegistroComando> registros) {
+        if (registros.isEmpty()) {
+            return;
+        }
+        comandos.addAll(registros);
+        int maximo = Math.max(100, plugin.ajustes().raiz().getInt("espia.registro.maximo-yaml", 5000));
+        while (comandos.size() > maximo) {
+            comandos.remove(0);
+        }
+        guardarComandos();
+    }
+
+    @Override
+    public synchronized List<RegistroComando> buscarComandos(String texto, UUID jugador, long desde,
+                                                             int limite, int desplazamiento) {
+        List<RegistroComando> filtrados = filtrarComandos(texto, jugador, desde);
+        int inicio = Math.min(desplazamiento, filtrados.size());
+        int fin = Math.min(filtrados.size(), inicio + limite);
+        return new ArrayList<>(filtrados.subList(inicio, fin));
+    }
+
+    @Override
+    public synchronized int contarComandos(String texto, UUID jugador, long desde) {
+        return filtrarComandos(texto, jugador, desde).size();
+    }
+
+    @Override
+    public synchronized int limpiarComandos(long antesDe) {
+        int antes = comandos.size();
+        comandos.removeIf(registro -> registro.fecha() < antesDe);
+        int quitados = antes - comandos.size();
+        if (quitados > 0) {
+            guardarComandos();
+        }
+        return quitados;
+    }
+
+    @Override
+    public synchronized int totalComandos() {
+        return comandos.size();
+    }
+
+    private List<RegistroComando> filtrarComandos(String texto, UUID jugador, long desde) {
+        String buscado = texto == null ? null : texto.toLowerCase(Locale.ROOT);
+        List<RegistroComando> resultado = new ArrayList<>();
+        for (RegistroComando registro : comandos) {
+            if (buscado != null && !registro.linea().toLowerCase(Locale.ROOT).contains(buscado)) {
+                continue;
+            }
+            if (jugador != null && !jugador.equals(registro.uuid())) {
+                continue;
+            }
+            if (desde > 0 && registro.fecha() < desde) {
+                continue;
+            }
+            resultado.add(registro);
+        }
+        resultado.sort((a, b) -> Long.compare(b.fecha(), a.fecha()));
+        return resultado;
+    }
+
+    private void cargarComandos() {
+        comandos.clear();
+        if (!archivoComandos.exists()) {
+            return;
+        }
+        YamlConfiguration configuracion = YamlConfiguration.loadConfiguration(archivoComandos);
+        ConfigurationSection raiz = configuracion.getConfigurationSection("comandos");
+        if (raiz == null) {
+            return;
+        }
+        for (String clave : raiz.getKeys(false)) {
+            ConfigurationSection seccion = raiz.getConfigurationSection(clave);
+            if (seccion == null) {
+                continue;
+            }
+            long id;
+            try {
+                id = Long.parseLong(clave);
+            } catch (NumberFormatException ignorado) {
+                continue;
+            }
+            comandos.add(new RegistroComando(id,
+                    uuidDe(seccion.getString("uuid")),
+                    seccion.getString("nombre", "?"),
+                    seccion.getString("comando", ""),
+                    seccion.getString("linea", ""),
+                    seccion.getString("mundo"),
+                    seccion.getLong("fecha")));
+        }
+    }
+
+    private void guardarComandos() {
+        YamlConfiguration configuracion = new YamlConfiguration();
+        long id = 1L;
+        for (RegistroComando registro : comandos) {
+            String base = "comandos." + id++;
+            configuracion.set(base + ".uuid", registro.uuid() == null ? null : registro.uuid().toString());
+            configuracion.set(base + ".nombre", registro.nombre());
+            configuracion.set(base + ".comando", registro.comando());
+            configuracion.set(base + ".linea", registro.linea());
+            configuracion.set(base + ".mundo", registro.mundo());
+            configuracion.set(base + ".fecha", registro.fecha());
+        }
+        try {
+            configuracion.save(archivoComandos);
+        } catch (IOException excepcion) {
+            plugin.getLogger().severe("No se pudo guardar comandos.yml: " + excepcion.getMessage());
+        }
     }
 
     // ---------------------------------------------------------------- internos

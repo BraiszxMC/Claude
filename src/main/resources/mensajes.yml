@@ -164,6 +164,21 @@ espia:
   lista: '%prefijo%<gray>Espiando ahora mismo: <white>%jugadores%'
   lista-vacia: '%prefijo%<gray>Nadie tiene el espia activado.'
   censurado: '<obfuscated>*****'
+  registro:
+    cabecera: '<dark_gray><strikethrough>          </strikethrough> <gradient:#ff4b4b:#ff9d00><bold>REGISTRO</bold></gradient> <white>%busqueda% <gray>(%pagina%/%paginas%) <dark_gray>· <white>%total% <gray>resultados <dark_gray><strikethrough>          </strikethrough>'
+    linea: '<gray>%fecha% <dark_gray>| <white>%jugador% <dark_gray>› <gray>%comando%'
+    linea-hover:
+      - '<white>%comando%'
+      - ''
+      - '<gray>Jugador: <white>%jugador%'
+      - '<gray>Comando: <white>/%raiz%'
+      - '<gray>Fecha: <white>%fecha% <dark_gray>(hace %hace%)'
+      - '<gray>Mundo: <white>%mundo%'
+      - '<gray>UUID: <white>%uuid%'
+      - ''
+      - '<yellow>Clic para copiarlo al chat'
+    pie: '<dark_gray>Usa <white>/spyX %busqueda% pagina:%siguiente% <dark_gray>para ver mas.'
+    vacio: '%prefijo%<gray>No hay ningun comando registrado que coincida con <white>%busqueda%<gray>.'
 
 gamemode:
   cambiado: '%prefijo%<green>Modo de juego cambiado a <white>%modo%<green>.'

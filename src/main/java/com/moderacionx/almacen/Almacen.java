@@ -1,5 +1,6 @@
 package com.moderacionx.almacen;
 
+import com.moderacionx.espia.RegistroComando;
 import com.moderacionx.sanciones.Sancion;
 import com.moderacionx.sanciones.TipoSancion;
 
@@ -41,4 +42,26 @@ public interface Almacen {
     Optional<Perfil> perfilPorUuid(UUID uuid) throws Exception;
 
     Optional<Perfil> perfilPorNombre(String nombre) throws Exception;
+
+    // ------------------------------------------------- registro de comandos
+
+    /** Guarda de golpe varios comandos ejecutados. */
+    void registrarComandos(List<RegistroComando> registros) throws Exception;
+
+    /**
+     * Busca en el registro de comandos.
+     *
+     * @param texto   texto a buscar dentro del comando, o null para no filtrar
+     * @param jugador uuid del autor, o null para todos
+     * @param desde   solo comandos posteriores a esta fecha (0 = sin limite)
+     */
+    List<RegistroComando> buscarComandos(String texto, UUID jugador, long desde,
+                                         int limite, int desplazamiento) throws Exception;
+
+    int contarComandos(String texto, UUID jugador, long desde) throws Exception;
+
+    /** Borra los comandos anteriores a esa fecha. Devuelve cuantos ha quitado. */
+    int limpiarComandos(long antesDe) throws Exception;
+
+    int totalComandos() throws Exception;
 }

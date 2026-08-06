@@ -28,9 +28,7 @@ public final class ListenerEspia implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void alUsarComandoConsola(ServerCommandEvent evento) {
-        if (!plugin.ajustes().espiaIncluirConsola()) {
-            return;
-        }
+        // difundir decide si sale en el espia en directo y si se guarda en el registro
         plugin.espias().difundir(evento.getSender().getName(), null, "/" + evento.getCommand());
     }
 

@@ -357,6 +357,26 @@ espia:
     - 'changepassword'
   # Guardar todos los comandos en logs/comandos.log
   guardar-en-archivo: true
+  # Registro consultable con /spyX (se guarda en la base de datos)
+  registro:
+    activado: true
+    # Dias que se conserva cada comando (0 = para siempre)
+    dias: 30
+    # Guardar tambien lo que se ejecuta desde la consola
+    incluir-consola: true
+    # Estos comandos no se guardan nunca en el registro.
+    # Por defecto se excluyen las propias busquedas para no ensuciar los resultados.
+    no-guardar:
+      - 'spyx'
+      - 'spylog'
+      - 'registro'
+      - 'buscarcomandos'
+    # Cada cuantos comandos se vuelca la cola a la base de datos
+    guardar-cada: 25
+    # Resultados por pagina en /spyX
+    lineas-por-pagina: 10
+    # Solo para almacenamiento YAML: cuantos comandos se guardan como maximo
+    maximo-yaml: 5000
   # Mostrar tambien los mensajes de chat normales
   incluir-chat: false
 
@@ -451,6 +471,9 @@ ayuda:
     - comando: '/spy'
       descripcion: 'Espiar los comandos del servidor'
       permiso: 'moderacionx.spy'
+    - comando: '/spyX <texto>'
+      descripcion: 'Buscar quien uso un comando'
+      permiso: 'moderacionx.spy.registro'
     - comando: '/gm <0|1|2|3> [jugador]'
       descripcion: 'Cambiar el modo de juego'
       permiso: 'moderacionx.gm'

@@ -1,6 +1,7 @@
 package com.moderacionx.almacen;
 
 import com.moderacionx.ModeracionX;
+import com.moderacionx.espia.RegistroComando;
 import com.moderacionx.sanciones.Sancion;
 import com.moderacionx.sanciones.TipoSancion;
 
@@ -69,6 +70,19 @@ public final class AlmacenSQLite implements Almacen {
                         primera INTEGER NOT NULL,
                         ultima INTEGER NOT NULL
                     );""");
+            statement.executeUpdate("""
+                    CREATE TABLE IF NOT EXISTS mx_comandos (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        uuid TEXT,
+                        nombre TEXT NOT NULL,
+                        comando TEXT NOT NULL,
+                        linea TEXT NOT NULL,
+                        mundo TEXT,
+                        fecha INTEGER NOT NULL
+                    );""");
+            statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_mx_cmd_fecha ON mx_comandos(fecha);");
+            statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_mx_cmd_uuid ON mx_comandos(uuid);");
+            statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_mx_cmd_comando ON mx_comandos(comando);");
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_mx_obj_uuid ON mx_sanciones(objetivo_uuid);");
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_mx_obj_ip ON mx_sanciones(objetivo_ip);");
             statement.executeUpdate("CREATE INDEX IF NOT EXISTS idx_mx_activa ON mx_sanciones(activa);");
@@ -196,6 +210,130 @@ public final class AlmacenSQLite implements Almacen {
     public synchronized Optional<Perfil> perfilPorNombre(String nombre) throws SQLException {
         return perfil("SELECT uuid, nombre, ip, primera, ultima FROM mx_jugadores WHERE nombre_bajo=?",
                 nombre.toLowerCase(Locale.ROOT));
+    }
+
+    // ------------------------------------------------- registro de comandos
+
+    @Override
+    public synchronized void registrarComandos(List<RegistroComando> registros) throws SQLException {
+        if (registros.isEmpty()) {
+            return;
+        }
+        String sql = "INSERT INTO mx_comandos (uuid, nombre, comando, linea, mundo, fecha) VALUES (?,?,?,?,?,?)";
+        boolean autocommit = conexion.getAutoCommit();
+        conexion.setAutoCommit(false);
+        try (PreparedStatement ps = conexion.prepareStatement(sql)) {
+            for (RegistroComando registro : registros) {
+                ps.setString(1, registro.uuid() == null ? null : registro.uuid().toString());
+                ps.setString(2, registro.nombre());
+                ps.setString(3, registro.comando());
+                ps.setString(4, registro.linea());
+                ps.setString(5, registro.mundo());
+                ps.setLong(6, registro.fecha());
+                ps.addBatch();
+            }
+            ps.executeBatch();
+            conexion.commit();
+        } catch (SQLException excepcion) {
+            conexion.rollback();
+            throw excepcion;
+        } finally {
+            conexion.setAutoCommit(autocommit);
+        }
+    }
+
+    @Override
+    public synchronized List<RegistroComando> buscarComandos(String texto, UUID jugador, long desde,
+                                                             int limite, int desplazamiento) throws SQLException {
+        StringBuilder sql = new StringBuilder(
+                "SELECT id, uuid, nombre, comando, linea, mundo, fecha FROM mx_comandos WHERE 1=1");
+        List<Object> parametros = filtros(sql, texto, jugador, desde);
+        sql.append(" ORDER BY fecha DESC LIMIT ? OFFSET ?");
+        parametros.add(limite);
+        parametros.add(desplazamiento);
+
+        List<RegistroComando> resultado = new ArrayList<>();
+        try (PreparedStatement ps = conexion.prepareStatement(sql.toString())) {
+            aplicar(ps, parametros);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    String uuidTexto = rs.getString("uuid");
+                    resultado.add(new RegistroComando(
+                            rs.getLong("id"),
+                            uuidTexto == null ? null : UUID.fromString(uuidTexto),
+                            rs.getString("nombre"),
+                            rs.getString("comando"),
+                            rs.getString("linea"),
+                            rs.getString("mundo"),
+                            rs.getLong("fecha")));
+                }
+            }
+        }
+        return resultado;
+    }
+
+    @Override
+    public synchronized int contarComandos(String texto, UUID jugador, long desde) throws SQLException {
+        StringBuilder sql = new StringBuilder("SELECT COUNT(*) FROM mx_comandos WHERE 1=1");
+        List<Object> parametros = filtros(sql, texto, jugador, desde);
+        try (PreparedStatement ps = conexion.prepareStatement(sql.toString())) {
+            aplicar(ps, parametros);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
+    }
+
+    @Override
+    public synchronized int limpiarComandos(long antesDe) throws SQLException {
+        try (PreparedStatement ps = conexion.prepareStatement("DELETE FROM mx_comandos WHERE fecha < ?")) {
+            ps.setLong(1, antesDe);
+            return ps.executeUpdate();
+        }
+    }
+
+    @Override
+    public synchronized int totalComandos() throws SQLException {
+        try (PreparedStatement ps = conexion.prepareStatement("SELECT COUNT(*) FROM mx_comandos");
+             ResultSet rs = ps.executeQuery()) {
+            return rs.next() ? rs.getInt(1) : 0;
+        }
+    }
+
+    /** Anade los WHERE comunes de la busqueda y devuelve sus parametros en orden. */
+    private List<Object> filtros(StringBuilder sql, String texto, UUID jugador, long desde) {
+        List<Object> parametros = new ArrayList<>();
+        if (texto != null && !texto.isBlank()) {
+            sql.append(" AND LOWER(linea) LIKE ? ESCAPE '\\'");
+            parametros.add("%" + escaparLike(texto.toLowerCase(Locale.ROOT)) + "%");
+        }
+        if (jugador != null) {
+            sql.append(" AND uuid = ?");
+            parametros.add(jugador.toString());
+        }
+        if (desde > 0) {
+            sql.append(" AND fecha >= ?");
+            parametros.add(desde);
+        }
+        return parametros;
+    }
+
+    private void aplicar(PreparedStatement ps, List<Object> parametros) throws SQLException {
+        for (int i = 0; i < parametros.size(); i++) {
+            Object valor = parametros.get(i);
+            if (valor instanceof Integer numero) {
+                ps.setInt(i + 1, numero);
+            } else if (valor instanceof Long numero) {
+                ps.setLong(i + 1, numero);
+            } else {
+                ps.setString(i + 1, String.valueOf(valor));
+            }
+        }
+    }
+
+    /** Escapa los comodines para que buscar "%" no devuelva todo. */
+    private String escaparLike(String texto) {
+        return texto.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
     // ---------------------------------------------------------------- internos
