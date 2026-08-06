@@ -179,6 +179,37 @@ gamemode:
 anuncio:
   enviado: '%prefijo%<green>Anuncio enviado.'
 
+sit:
+  sentado: '%prefijo%<green>Te has sentado. <gray>Agachate para levantarte.'
+  levantado: '%prefijo%<gray>Te has levantado.'
+  desactivado: '%prefijo%<red>El comando /sit esta desactivado.'
+  mundo-prohibido: '%prefijo%<red>Aqui no te puedes sentar.'
+  zona-prohibida: '%prefijo%<red>No te puedes sentar dentro de una arena.'
+  ya-montado: '%prefijo%<red>Ya estas montado en algo.'
+  no-ahora: '%prefijo%<red>Ahora mismo no te puedes sentar.'
+  bloque-invalido: '%prefijo%<red>No te puedes sentar ahi.'
+  bloque-prohibido: '%prefijo%<red>En ese bloque no te puedes sentar.'
+  sin-espacio: '%prefijo%<red>No hay sitio para sentarse.'
+  lejos: '%prefijo%<red>Estas demasiado lejos de ese bloque.'
+  error: '%prefijo%<red>No se ha podido crear el asiento.'
+  # --- zonas ---
+  pos1: '%prefijo%<green>Punto 1 puesto en <white>%x%, %y%, %z%<green>.'
+  pos2: '%prefijo%<green>Punto 2 puesto en <white>%x%, %y%, %z%<green>.'
+  faltan-puntos: '%prefijo%<red>Marca antes los dos puntos con <white>/sit zona pos1 <red>y <white>pos2<red>.'
+  zona-creada: '%prefijo%<green>Zona <white>%zona% <green>creada. <gray>%coordenadas%'
+  zona-borrada: '%prefijo%<green>Zona <white>%zona% <green>borrada.'
+  zona-no-existe: '%prefijo%<red>No existe la zona <white>%zona%<red>.'
+  zonas-cabecera: '%prefijo%<gray>Zonas donde no se puede uno sentar: <white>%cantidad%'
+  zonas-linea: '<dark_gray>· <white>%zona% <gray>%coordenadas%'
+  zonas-vacias: '%prefijo%<gray>No hay ninguna zona definida.'
+  aqui-prohibido: '%prefijo%<red>Aqui no se puede uno sentar: zona <white>%zona%<red>.'
+  aqui-permitido: '%prefijo%<green>Aqui si se puede uno sentar.'
+  importar-linea: '<dark_gray>· <white>%zona% <gray>%coordenadas%'
+  importar-fin: '%prefijo%<green>Importadas <white>%cantidad% <green>zonas de <white>%plugin%<green>. <gray>Revisalas con /sit zona lista.'
+  importar-nada:
+    - '%prefijo%<red>No se ha encontrado ninguna arena en <white>plugins/%plugin%<red>.'
+    - '<gray>Marcalas a mano: <white>/sit zona pos1 <gray>y <white>pos2 <gray>en dos esquinas y luego <white>/sit zona crear <nombre>'
+
 fly:
   activado: '%prefijo%<green>Vuelo <bold>activado<reset><green>.'
   desactivado: '%prefijo%<red>Vuelo <bold>desactivado<reset><red>.'

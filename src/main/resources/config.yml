@@ -152,6 +152,38 @@ efectos:
     oozing: 'Rezumante'
     infested: 'Infestado'
 
+sit:
+  # /sit - sentarse en los bloques
+  activado: true
+  # Distancia maxima al bloque donde sentarse
+  distancia-maxima: 3.0
+  # Altura del asiento respecto a la cara de arriba del bloque.
+  # Si el jugador se ve flotando bajalo, si se hunde subelo.
+  altura: 0.25
+  # Levantarse solo al recibir dano
+  levantar-al-recibir-dano: true
+  # Mirar hacia donde estabas mirando al sentarte
+  mantener-mirada: true
+  # Sentarse tambien con clic derecho sobre un bloque (con la mano vacia)
+  clic-derecho: false
+  # ...y solo si vas agachado, para no molestar al usar cofres y demas
+  clic-derecho-agachado: true
+  # Mundos donde no se puede uno sentar
+  mundos-prohibidos: []
+  # Si esta lista tiene algo, SOLO se podra uno sentar en estos bloques
+  solo-bloques: []
+  # Bloques donde nunca se puede uno sentar
+  bloques-prohibidos:
+    - 'CHEST'
+    - 'TRAPPED_CHEST'
+    - 'ENDER_CHEST'
+    - 'BARREL'
+    - 'CRAFTING_TABLE'
+    - 'FURNACE'
+    - 'ANVIL'
+  # Bloques que se anaden alrededor de cada arena al usar /sit importar
+  margen-importacion: 2
+
 fly:
   # Velocidad de vuelo (0.1 es la normal, 1.0 el maximo)
   velocidad: 0.1
@@ -437,6 +469,12 @@ ayuda:
     - comando: '/customitem'
       descripcion: 'Editor de items y encantamientos'
       permiso: 'moderacionx.items'
+    - comando: '/sit'
+      descripcion: 'Sentarse en los bloques'
+      permiso: 'moderacionx.sit'
+    - comando: '/sit zona pos1|pos2|crear'
+      descripcion: 'Zonas donde no se puede uno sentar'
+      permiso: 'moderacionx.sit.zonas'
     - comando: '/mx recargar'
       descripcion: 'Recargar la configuracion'
       permiso: 'moderacionx.admin'

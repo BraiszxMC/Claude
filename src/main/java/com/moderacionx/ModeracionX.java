@@ -18,6 +18,7 @@ import com.moderacionx.comandos.ComandoItems;
 import com.moderacionx.comandos.ComandoKick;
 import com.moderacionx.comandos.ComandoMute;
 import com.moderacionx.comandos.ComandoPrincipal;
+import com.moderacionx.comandos.ComandoSit;
 import com.moderacionx.comandos.ComandoSpy;
 import com.moderacionx.comandos.ComandoUnban;
 import com.moderacionx.comandos.ComandoUnbanIP;
@@ -39,7 +40,9 @@ import com.moderacionx.listeners.ListenerFly;
 import com.moderacionx.listeners.ListenerItems;
 import com.moderacionx.listeners.ListenerInventario;
 import com.moderacionx.listeners.ListenerSecretos;
+import com.moderacionx.listeners.ListenerSit;
 import com.moderacionx.sanciones.GestorSanciones;
+import com.moderacionx.sit.GestorSit;
 import com.moderacionx.secretos.GestorSecretos;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
@@ -71,6 +74,7 @@ public final class ModeracionX extends JavaPlugin {
     private GestorEfectos efectos;
     private GestorFly fly;
     private GestorItems items;
+    private GestorSit sit;
     private BukkitTask tareaRevision;
 
     @Override
@@ -90,6 +94,7 @@ public final class ModeracionX extends JavaPlugin {
         efectos = new GestorEfectos(this);
         fly = new GestorFly(this);
         items = new GestorItems(this);
+        sit = new GestorSit(this);
 
         registrarComandos();
         registrarListeners();
@@ -106,6 +111,9 @@ public final class ModeracionX extends JavaPlugin {
         }
         if (secretos != null) {
             secretos.limpiarTodo();
+        }
+        if (sit != null) {
+            sit.limpiarTodo();
         }
         if (almacen != null) {
             almacen.cerrar();
@@ -165,6 +173,7 @@ public final class ModeracionX extends JavaPlugin {
         registrar("efectos", new ComandoEfectos(this));
         registrar("fly", new ComandoFly(this));
         registrar("customitem", new ComandoItems(this));
+        registrar("sit", new ComandoSit(this));
         registrar("help", new ComandoAyuda(this));
     }
 
@@ -189,6 +198,7 @@ public final class ModeracionX extends JavaPlugin {
         gestor.registerEvents(new ListenerEfectos(this), this);
         gestor.registerEvents(new ListenerItems(this), this);
         gestor.registerEvents(new ListenerFly(this), this);
+        gestor.registerEvents(new ListenerSit(this), this);
     }
 
     private void programarRevision() {
@@ -196,7 +206,10 @@ public final class ModeracionX extends JavaPlugin {
             tareaRevision.cancel();
         }
         long periodo = ajustes.intervaloRevision() * 20L;
-        tareaRevision = Bukkit.getScheduler().runTaskTimer(this, () -> sanciones.revisarCaducadas(), periodo, periodo);
+        tareaRevision = Bukkit.getScheduler().runTaskTimer(this, () -> {
+            sanciones.revisarCaducadas();
+            sit.revisar();
+        }, periodo, periodo);
     }
 
     /**
@@ -242,6 +255,7 @@ public final class ModeracionX extends JavaPlugin {
         ajustes.recargar();
         mensajes.recargar();
         secretos.recargar();
+        sit.cargarZonas();
         antivpn.recargar();
         sanciones.cargar();
         programarRevision();
@@ -307,5 +321,9 @@ public final class ModeracionX extends JavaPlugin {
 
     public GestorItems items() {
         return items;
+    }
+
+    public GestorSit sit() {
+        return sit;
     }
 }

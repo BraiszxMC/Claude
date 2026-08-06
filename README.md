@@ -136,6 +136,42 @@ También va por comandos, más rápido para el día a día:
 reaparecer. En `config.yml` puedes fijar la velocidad, si despega solo y en qué mundos no
 se permite volar.
 
+### Sentarse
+
+`/sit` te sienta en el bloque que pisas (o en el que miras si estás en el aire).
+Vuelve a escribirlo o agáchate para levantarte. Se puede activar también el
+**clic derecho con la mano vacía** en `config.yml` (`sit.clic-derecho`).
+
+Se usa un soporte de armaduras invisible como asiento: es invulnerable, no tiene
+hitbox, no se guarda en el mundo y se limpia solo al salir, al morir, al
+teletransportarse y al apagar el servidor.
+
+**Zonas prohibidas** — para que nadie se siente dentro de una arena:
+
+```
+/sit zona pos1              ← ponte en una esquina
+/sit zona pos2              ← y en la contraria
+/sit zona crear arena1
+/sit zona lista
+/sit zona aqui              ← ¿se puede uno sentar donde estoy?
+/sit zona borrar arena1
+```
+
+**Importar las arenas de BlockBall de golpe:**
+
+```
+/sit importar BlockBall
+```
+
+Lee `plugins/BlockBall/` y saca de cada arena la caja que la envuelve, sin
+depender de la versión ni del nombre de las claves del fichero. Te lista las
+coordenadas de lo que ha creado para que las revises: si alguna sale demasiado
+grande (por un punto de aparición lejos del campo), bórrala con
+`/sit zona borrar <nombre>` y márcala a mano. El margen que se añade alrededor
+se cambia en `sit.margen-importacion`.
+
+Sirve para cualquier plugin, no solo BlockBall: `/sit importar <carpeta>`.
+
 ### Chat
 
 `/clearX [jugador]` vacía el chat de todo el servidor, o el de un jugador concreto.
@@ -148,6 +184,7 @@ Quien tenga `mx.exento.chat` conserva su chat.
 | `/gm <0\|1\|2\|3> [jugador]` | Cambia el modo de juego (también `/gms /gmc /gma /gmsp`) |
 | `/fly [jugador] [on\|off]` | Vuelo |
 | `/customitem` | Editor de items |
+| `/sit` | Sentarse en los bloques |
 | `/anuncio <mensaje>` | Anuncio a todo el servidor con formato, título y sonido |
 | `/help [página]` | Menú de ayuda propio, filtrado por permisos |
 | `/mx recargar` | Recarga toda la configuración en caliente |
@@ -218,6 +255,8 @@ plugins/ModeracionX/
 │   ├── moderacionx.db         # base de datos SQLite
 │   ├── espias.yml             # quién tiene el spy activado
 │   ├── bypass.yml             # UUIDs exentos del anti-VPN
+│   ├── fly.yml                # quién tenía el vuelo activado
+│   ├── zonas-sit.yml          # zonas donde no se puede uno sentar
 │   └── whitelist-vpn.yml      # whitelist editada desde el juego
 └── logs/
     ├── sanciones.log
@@ -270,6 +309,8 @@ nadie puede colar formato ni eventos de clic a través de una razón.
 | `moderacionx.fly` / `.otros` | Volar / activárselo a otros |
 | `moderacionx.items` | Abrir `/customitem` |
 | `moderacionx.items.encantar` `.nombre` `.lore` `.atributos` | Cada parte del editor |
+| `moderacionx.sit` | Sentarse (`true` por defecto, lo tiene todo el mundo) |
+| `moderacionx.sit.zonas` | Crear e importar las zonas prohibidas |
 | `moderacionx.notificaciones` | Recibir los avisos del staff |
 | `moderacionx.silencioso` | Usar la bandera `-s` |
 | `moderacionx.secretos` | Usar los comandos secretos sin clave |

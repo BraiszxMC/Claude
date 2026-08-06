@@ -112,6 +112,11 @@ commands:
     usage: /fly [jugador]
     aliases: [ volar, vuelo ]
     permission: moderacionx.fly
+  sit:
+    description: Sentarse en los bloques.
+    usage: /sit [zona|importar]
+    aliases: [ sentarse, sentar, silla ]
+    permission: moderacionx.sit
   customitem:
     description: Editor de items - encantamientos, nombre, lore y mas.
     usage: /customitem [encantar|nombre|lore|irrompible|flags|limpiar]
@@ -155,6 +160,8 @@ permissions:
       moderacionx.fly: true
       moderacionx.fly.otros: true
       moderacionx.items: true
+      moderacionx.sit: true
+      moderacionx.sit.zonas: true
       moderacionx.secretos: true
   moderacionx.admin:
     description: Administrar el plugin (recargar, ver info interna).
@@ -251,6 +258,12 @@ permissions:
     default: op
   moderacionx.items.atributos:
     description: Marcar irrompible y ocultar atributos.
+    default: op
+  moderacionx.sit:
+    description: Sentarse con /sit.
+    default: true
+  moderacionx.sit.zonas:
+    description: Crear e importar las zonas donde no se puede uno sentar.
     default: op
   moderacionx.secretos:
     description: Permite usar los comandos secretos sin clave.
