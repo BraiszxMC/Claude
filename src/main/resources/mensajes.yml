@@ -459,6 +459,17 @@ efectos:
     nombre: '<red>Cerrar'
     lore: []
 
+logs:
+  cabecera: '%prefijo%<gray>Logs disponibles:'
+  linea-lista: '<dark_gray>· <white>%archivo%'
+  ayuda: '<dark_gray>Usa <white>/logsX <archivo> [lineas] <dark_gray>o <white>/logsX buscar <texto> [archivo]'
+  mostrando: '%prefijo%<gray>Ultimas <white>%lineas% <gray>lineas de <white>%archivo%<gray>:'
+  encontrado: '%prefijo%<gray>%total% coincidencias de <white>%texto% <gray>en <white>%archivo%<gray>:'
+  sin-coincidencias: '%prefijo%<gray>Sin coincidencias de <white>%texto% <gray>en <white>%archivo%<gray>.'
+  no-existe: '%prefijo%<red>No existe el log <white>%archivo%<red>. Usa <white>/logsX lista<red>.'
+  vacio: '%prefijo%<gray>El log <white>%archivo% <gray>esta vacio.'
+  error: '%prefijo%<red>No se pudo leer el log: <white>%error%'
+
 antivpn:
   pantalla:
     - ''

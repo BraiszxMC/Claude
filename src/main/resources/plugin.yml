@@ -92,6 +92,11 @@ commands:
     usage: /spyX <texto> [jugador:<nombre>] [dias:<n>] [pagina:<n>]
     aliases: [ spylog, registro, buscarcomandos, spyx ]
     permission: moderacionx.spy.registro
+  logsx:
+    description: Lee los logs del servidor y del plugin desde el juego.
+    usage: /logsX <archivo|lista|buscar> ...
+    aliases: [ logs, verlogs, logsx ]
+    permission: moderacionx.logs
   gm:
     description: Cambia el modo de juego.
     usage: /gm <0|1|2|3> [jugador]
@@ -154,6 +159,7 @@ permissions:
       moderacionx.echest: true
       moderacionx.spy: true
       moderacionx.spy.registro: true
+      moderacionx.logs: true
       moderacionx.gm: true
       moderacionx.gm.otros: true
       moderacionx.anuncio: true
@@ -211,6 +217,9 @@ permissions:
     default: op
   moderacionx.spy.registro:
     description: Consultar el registro de comandos con /spyX.
+    default: op
+  moderacionx.logs:
+    description: Leer los logs con /logsX.
     default: op
   moderacionx.gm:
     default: op

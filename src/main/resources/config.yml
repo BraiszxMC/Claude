@@ -474,6 +474,9 @@ ayuda:
     - comando: '/spyX <texto>'
       descripcion: 'Buscar quien uso un comando'
       permiso: 'moderacionx.spy.registro'
+    - comando: '/logsX <archivo>'
+      descripcion: 'Leer los logs del servidor'
+      permiso: 'moderacionx.logs'
     - comando: '/gm <0|1|2|3> [jugador]'
       descripcion: 'Cambiar el modo de juego'
       permiso: 'moderacionx.gm'
@@ -501,6 +504,54 @@ ayuda:
     - comando: '/mx recargar'
       descripcion: 'Recargar la configuracion'
       permiso: 'moderacionx.admin'
+
+discord:
+  # Reenvia lo que pasa en el servidor a Discord con webhooks (Minecraft -> Discord).
+  # Un webhook solo puede ENVIAR a Discord; para Discord -> Minecraft haria falta un bot.
+  activado: false
+  # Puedes poner tantos webhooks como quieras, cada uno a un canal distinto.
+  # Copia la URL del webhook desde Ajustes del canal -> Integraciones -> Webhooks.
+  webhooks:
+    general:
+      url: ''
+      nombre: 'Servidor'
+      avatar: ''
+      # true = mensajes con embed de color; false = texto plano
+      embed: true
+      color: '#5865F2'
+      # Eventos que manda este webhook. Usa [ '*' ] para todos.
+      eventos: [ 'chat', 'entrada', 'salida', 'muerte' ]
+    moderacion:
+      url: ''
+      nombre: 'Moderacion'
+      avatar: ''
+      embed: true
+      color: '#e74c3c'
+      eventos: [ 'ban', 'banip', 'kick', 'mute', 'warn' ]
+  # Texto de cada evento. Admite formato Markdown de Discord (**negrita**, etc.).
+  formatos:
+    chat: '**%jugador%**: %mensaje%'
+    entrada: '+ **%jugador%** se ha unido (%online% en linea)'
+    salida: '- **%jugador%** se ha ido (%online% en linea)'
+    muerte: '%mensaje%'
+    ban: '**%objetivo%** baneado por **%autor%** - %razon% [%duracion%]'
+    banip: 'IP de **%objetivo%** baneada por **%autor%** - %razon%'
+    kick: '**%objetivo%** expulsado por **%autor%** - %razon%'
+    mute: '**%objetivo%** silenciado por **%autor%** - %razon% [%duracion%]'
+    warn: '**%objetivo%** advertido por **%autor%** - %razon%'
+  # Titulo opcional de cada evento (solo se ve con embed activado). Vacio = sin titulo.
+  titulos:
+    ban: 'Baneo'
+    banip: 'Baneo de IP'
+    kick: 'Expulsion'
+    mute: 'Silencio'
+    warn: 'Advertencia'
+
+logs:
+  # /logsX - leer los logs del servidor y del plugin desde el juego
+  lineas-por-defecto: 15
+  lineas-maximas: 100
+  formato-linea: '<gray>%linea%'
 
 vanilla:
   # Oculta los comandos originales de Minecraft para que los de ModeracionX

@@ -357,6 +357,56 @@ serían imbaneables y `/clearX` no les limpiaría el chat (contaría "0 jugadore
 
 ---
 
+## Discord (webhooks)
+
+Reenvía lo que pasa en el servidor a Discord. Va en un sentido — **Minecraft → Discord** —
+que es lo que permite un webhook (para Discord → Minecraft haría falta un bot con token).
+
+Puedes configurar **varios webhooks**, cada uno apuntando a un canal distinto y escuchando
+solo los eventos que quieras. Por ejemplo: el chat y las entradas/salidas a un canal, y las
+sanciones a otro de moderación.
+
+```yaml
+discord:
+  activado: true
+  webhooks:
+    general:
+      url: 'https://discord.com/api/webhooks/....'
+      nombre: 'Servidor'
+      embed: true
+      color: '#5865F2'
+      eventos: [ 'chat', 'entrada', 'salida', 'muerte' ]
+    moderacion:
+      url: 'https://discord.com/api/webhooks/....'
+      nombre: 'Moderación'
+      embed: false
+      eventos: [ 'ban', 'banip', 'kick', 'mute', 'warn' ]
+```
+
+- La URL se saca en Discord: **Ajustes del canal → Integraciones → Webhooks → Copiar URL**.
+- Eventos: `chat`, `entrada`, `salida`, `muerte`, `ban`, `banip`, `kick`, `mute`, `warn`.
+  Usa `[ '*' ]` para todos.
+- Cada webhook puede usar embed de color o texto plano, y el texto de cada evento se cambia
+  en `discord.formatos`.
+- Los mensajes se mandan en segundo plano (no bloquean el servidor) y se ignoran las
+  menciones, así que nadie puede hacer `@everyone` desde el chat del juego.
+
+### Ver los logs desde el juego
+
+`/logsX` lee los logs sin salir del servidor:
+
+```
+/logsX lista                     qué logs hay
+/logsX latest 20                 últimas 20 líneas del log del servidor
+/logsX sanciones                 el log de sanciones del plugin
+/logsX buscar EntityX latest     buscar un texto dentro de un log
+```
+
+Solo abre logs conocidos (el `latest.log` del servidor y los de ModeracionX); no se puede
+pedir una ruta arbitraria. Permiso: `moderacionx.logs`.
+
+---
+
 ## LuckPerms
 
 Todos los permisos están declarados en el `plugin.yml`, así que LuckPerms los autocompleta

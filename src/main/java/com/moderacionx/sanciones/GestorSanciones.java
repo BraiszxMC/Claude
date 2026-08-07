@@ -157,6 +157,7 @@ public final class GestorSanciones {
         }
         indexar(sancion);
         registrarEnLog(sancion);
+        plugin.discord().evento(sancion.tipo().name().toLowerCase(Locale.ROOT), datos(sancion));
         return sancion;
     }
 

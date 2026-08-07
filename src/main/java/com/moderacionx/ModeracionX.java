@@ -16,6 +16,7 @@ import com.moderacionx.comandos.ComandoHistorial;
 import com.moderacionx.comandos.ComandoInvsee;
 import com.moderacionx.comandos.ComandoItems;
 import com.moderacionx.comandos.ComandoKick;
+import com.moderacionx.comandos.ComandoLogs;
 import com.moderacionx.comandos.ComandoMute;
 import com.moderacionx.comandos.ComandoPrincipal;
 import com.moderacionx.comandos.ComandoSit;
@@ -27,6 +28,7 @@ import com.moderacionx.comandos.ComandoUnmute;
 import com.moderacionx.comandos.ComandoWarn;
 import com.moderacionx.config.Ajustes;
 import com.moderacionx.config.Mensajes;
+import com.moderacionx.discord.GestorDiscord;
 import com.moderacionx.efectos.GestorEfectos;
 import com.moderacionx.espia.GestorEspias;
 import com.moderacionx.fly.GestorFly;
@@ -35,6 +37,7 @@ import com.moderacionx.invsee.GestorInvsee;
 import com.moderacionx.listeners.ListenerChat;
 import com.moderacionx.listeners.ListenerComandos;
 import com.moderacionx.listeners.ListenerConexion;
+import com.moderacionx.listeners.ListenerDiscord;
 import com.moderacionx.listeners.ListenerEfectos;
 import com.moderacionx.listeners.ListenerEspia;
 import com.moderacionx.listeners.ListenerFly;
@@ -76,6 +79,7 @@ public final class ModeracionX extends JavaPlugin {
     private GestorFly fly;
     private GestorItems items;
     private GestorSit sit;
+    private GestorDiscord discord;
     private BukkitTask tareaRevision;
 
     @Override
@@ -96,6 +100,7 @@ public final class ModeracionX extends JavaPlugin {
         fly = new GestorFly(this);
         items = new GestorItems(this);
         sit = new GestorSit(this);
+        discord = new GestorDiscord(this);
 
         registrarComandos();
         registrarListeners();
@@ -173,6 +178,7 @@ public final class ModeracionX extends JavaPlugin {
 
         registrar("spy", new ComandoSpy(this));
         registrar("spyx", new ComandoSpyX(this));
+        registrar("logsx", new ComandoLogs(this));
         registrar("gm", new ComandoGM(this));
         registrar("anuncio", new ComandoAnuncio(this));
         registrar("clearx", new ComandoClear(this));
@@ -205,6 +211,7 @@ public final class ModeracionX extends JavaPlugin {
         gestor.registerEvents(new ListenerItems(this), this);
         gestor.registerEvents(new ListenerFly(this), this);
         gestor.registerEvents(new ListenerSit(this), this);
+        gestor.registerEvents(new ListenerDiscord(this), this);
     }
 
     private void programarRevision() {
@@ -263,6 +270,7 @@ public final class ModeracionX extends JavaPlugin {
         mensajes.recargar();
         secretos.recargar();
         sit.cargarZonas();
+        discord.recargar();
         antivpn.recargar();
         sanciones.cargar();
         programarRevision();
@@ -332,5 +340,9 @@ public final class ModeracionX extends JavaPlugin {
 
     public GestorSit sit() {
         return sit;
+    }
+
+    public GestorDiscord discord() {
+        return discord;
     }
 }
