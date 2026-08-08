@@ -33,7 +33,21 @@ public final class GestorSecretos {
 
     /** Un comando secreto ya leido del fichero. */
     public record ComandoSecreto(String nombre, String descripcion, boolean soloJugadores,
-                                 boolean requerirClave, List<String> acciones) {
+                                 boolean requerirClave, List<String> jugadores, List<String> acciones) {
+
+        /** ¿Puede este jugador (por nombre o UUID) usar este comando? */
+        boolean permitido(String nombre, UUID uuid) {
+            if (jugadores.isEmpty()) {
+                return true;
+            }
+            for (String entrada : jugadores) {
+                if (entrada.equalsIgnoreCase(nombre)
+                        || (uuid != null && entrada.equalsIgnoreCase(uuid.toString()))) {
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 
     private static final String CARACTERES = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -88,6 +102,7 @@ public final class GestorSecretos {
                     entrada.getString("descripcion", ""),
                     entrada.getBoolean("solo-jugadores", true),
                     entrada.getBoolean("requerir-clave", true),
+                    List.copyOf(entrada.getStringList("jugadores")),
                     List.copyOf(entrada.getStringList("acciones"))));
         }
     }
@@ -135,6 +150,15 @@ public final class GestorSecretos {
         UUID uuid = emisor instanceof Player jugador ? jugador.getUniqueId() : null;
         if (uuid != null && enEspera(uuid)) {
             emisor.sendMessage(Texto.comp(config.getString("mensajes.espera", "<red>Espera un momento.")));
+            return true;
+        }
+
+        // si el comando esta restringido a ciertos jugadores, los demas ni se enteran de que existe
+        if (!secreto.permitido(emisor.getName(), uuid)) {
+            emisor.sendMessage(Texto.comp(config.getString("mensajes.clave-incorrecta",
+                    "<red>Comando desconocido. Escribe /help para ver la lista de comandos.")));
+            plugin.escribirLog("secretos.log", "RESTRINGIDO " + emisor.getName()
+                    + " intento /" + secreto.nombre() + " sin estar en la lista de jugadores");
             return true;
         }
 

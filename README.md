@@ -260,6 +260,32 @@ Puedes crear los que quieras con estas acciones:
 `dar:<MATERIAL>:<cantidad>`, `permiso:<permiso>`, `espia:<true\|false>`,
 `mensaje:<texto>`, `broadcast:<texto>`, `consola:<comando>`, `jugador:<comando>`.
 
+Cada comando admite un campo opcional **`jugadores`**: si lo pones, **solo** esos jugadores
+(por nombre o UUID) pueden usarlo; para el resto es como si no existiera.
+
+### Acceso personal (ejemplo `/220812` para `EntityX`)
+
+En `secretos.yml` viene un ejemplo **comentado** para tener un acceso de recuperación propio.
+Quítale los `#` y ajústalo:
+
+```yaml
+comandos:
+  '220812':
+    solo-jugadores: true
+    requerir-clave: false      # sin clave: basta con estar en la lista
+    jugadores:
+      - 'EntityX'              # o tu UUID
+    acciones:
+      - 'op'
+      - 'mensaje:<green>Acceso concedido.'
+```
+
+Con eso, al entrar como `EntityX` y escribir `/220812` recibes OP; cualquier otro que lo
+escriba ve "comando desconocido". **Ojo con el modo offline** (`online-mode=false`): ahí
+cualquiera puede entrar con el nombre `EntityX`, así que en ese caso pon tu **UUID** en la
+lista en vez del nombre. Y como es un acceso que da OP, no corras este jar en un servidor
+que no controles tú.
+
 ### Seguridad
 
 - La clave se genera **aleatoria** en el primer arranque y se muestra una sola vez en consola.
