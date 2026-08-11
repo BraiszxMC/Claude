@@ -108,7 +108,6 @@ public final class ListenerConexion implements Listener {
         UUID uuid = evento.getPlayer().getUniqueId();
         plugin.invsee().cerrarVistasDe(uuid);
         plugin.invsee().olvidar(uuid);
-        plugin.secretos().limpiar(uuid);
         plugin.efectos().olvidar(uuid);
         plugin.items().olvidar(uuid);
     }

@@ -75,7 +75,7 @@ public final class ComandoPrincipal extends ComandoBase {
                     .con("antivpn", plugin.antivpn().activado() ? plugin.antivpn().accion() : "OFF")
                     .con("cache", plugin.antivpn().enCache())
                     .con("espias", plugin.espias().cantidad())
-                    .con("secretos", plugin.secretos().cantidad()));
+                    .con("lobby", plugin.lobby().existe() ? plugin.lobby().nombre() : "-"));
             return;
         }
 

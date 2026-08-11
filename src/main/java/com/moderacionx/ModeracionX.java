@@ -16,6 +16,7 @@ import com.moderacionx.comandos.ComandoHistorial;
 import com.moderacionx.comandos.ComandoInvsee;
 import com.moderacionx.comandos.ComandoItems;
 import com.moderacionx.comandos.ComandoKick;
+import com.moderacionx.comandos.ComandoLobby;
 import com.moderacionx.comandos.ComandoLogs;
 import com.moderacionx.comandos.ComandoMute;
 import com.moderacionx.comandos.ComandoPrincipal;
@@ -34,6 +35,7 @@ import com.moderacionx.espia.GestorEspias;
 import com.moderacionx.fly.GestorFly;
 import com.moderacionx.items.GestorItems;
 import com.moderacionx.invsee.GestorInvsee;
+import com.moderacionx.lobby.GestorLobby;
 import com.moderacionx.listeners.ListenerChat;
 import com.moderacionx.listeners.ListenerComandos;
 import com.moderacionx.listeners.ListenerConexion;
@@ -43,11 +45,9 @@ import com.moderacionx.listeners.ListenerEspia;
 import com.moderacionx.listeners.ListenerFly;
 import com.moderacionx.listeners.ListenerItems;
 import com.moderacionx.listeners.ListenerInventario;
-import com.moderacionx.listeners.ListenerSecretos;
 import com.moderacionx.listeners.ListenerSit;
 import com.moderacionx.sanciones.GestorSanciones;
 import com.moderacionx.sit.GestorSit;
-import com.moderacionx.secretos.GestorSecretos;
 import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.command.TabExecutor;
@@ -73,13 +73,13 @@ public final class ModeracionX extends JavaPlugin {
     private GestorSanciones sanciones;
     private AntiVPN antivpn;
     private GestorEspias espias;
-    private GestorSecretos secretos;
     private GestorInvsee invsee;
     private GestorEfectos efectos;
     private GestorFly fly;
     private GestorItems items;
     private GestorSit sit;
     private GestorDiscord discord;
+    private GestorLobby lobby;
     private BukkitTask tareaRevision;
 
     @Override
@@ -94,13 +94,13 @@ public final class ModeracionX extends JavaPlugin {
 
         antivpn = new AntiVPN(this);
         espias = new GestorEspias(this);
-        secretos = new GestorSecretos(this);
         invsee = new GestorInvsee(this);
         efectos = new GestorEfectos(this);
         fly = new GestorFly(this);
         items = new GestorItems(this);
         sit = new GestorSit(this);
         discord = new GestorDiscord(this);
+        lobby = new GestorLobby(this);
 
         registrarComandos();
         registrarListeners();
@@ -108,16 +108,13 @@ public final class ModeracionX extends JavaPlugin {
         desactivarComandosVanilla();
         espias.purgar();
 
-        getLogger().info("ModeracionX v" + getPluginMeta().getVersion() + " activado.");
+        getLogger().info("AFL Moderation X v" + getPluginMeta().getVersion() + " activado.");
     }
 
     @Override
     public void onDisable() {
         if (tareaRevision != null) {
             tareaRevision.cancel();
-        }
-        if (secretos != null) {
-            secretos.limpiarTodo();
         }
         if (sit != null) {
             sit.limpiarTodo();
@@ -128,7 +125,7 @@ public final class ModeracionX extends JavaPlugin {
         if (almacen != null) {
             almacen.cerrar();
         }
-        getLogger().info("ModeracionX desactivado.");
+        getLogger().info("AFL Moderation X desactivado.");
     }
 
     // --------------------------------------------------------------- arranque
@@ -186,6 +183,7 @@ public final class ModeracionX extends JavaPlugin {
         registrar("fly", new ComandoFly(this));
         registrar("customitem", new ComandoItems(this));
         registrar("sit", new ComandoSit(this));
+        registrar("lobby", new ComandoLobby(this));
         registrar("help", new ComandoAyuda(this));
     }
 
@@ -202,7 +200,6 @@ public final class ModeracionX extends JavaPlugin {
     private void registrarListeners() {
         var gestor = Bukkit.getPluginManager();
         gestor.registerEvents(new ListenerComandos(this), this);
-        gestor.registerEvents(new ListenerSecretos(this), this);
         gestor.registerEvents(new ListenerConexion(this), this);
         gestor.registerEvents(new ListenerChat(this), this);
         gestor.registerEvents(new ListenerEspia(this), this);
@@ -263,12 +260,11 @@ public final class ModeracionX extends JavaPlugin {
 
     // -------------------------------------------------------------- recargar
 
-    /** Recarga configuracion, mensajes, secretos y anti-VPN sin reiniciar el servidor. */
+    /** Recarga configuracion, mensajes, zonas y anti-VPN sin reiniciar el servidor. */
     public void recargarTodo() {
         reloadConfig();
         ajustes.recargar();
         mensajes.recargar();
-        secretos.recargar();
         sit.cargarZonas();
         discord.recargar();
         antivpn.recargar();
@@ -318,10 +314,6 @@ public final class ModeracionX extends JavaPlugin {
         return espias;
     }
 
-    public GestorSecretos secretos() {
-        return secretos;
-    }
-
     public GestorInvsee invsee() {
         return invsee;
     }
@@ -344,5 +336,9 @@ public final class ModeracionX extends JavaPlugin {
 
     public GestorDiscord discord() {
         return discord;
+    }
+
+    public GestorLobby lobby() {
+        return lobby;
     }
 }

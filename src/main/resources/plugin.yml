@@ -2,8 +2,8 @@ name: ${project.name}
 version: ${project.version}
 main: com.moderacionx.ModeracionX
 api-version: '1.21'
-authors: [ ModeracionX ]
-description: 'Moderacion total: sanciones temporales, anti-VPN, invsee, spy de comandos y mas.'
+authors: [ AFL ]
+description: 'AFL Moderation X: moderacion total, anti-VPN, invsee, spy de comandos, lobby y mas.'
 website: https://github.com/braiszxmc/claude
 folia-supported: false
 softdepend: [ LuckPerms, Vault, PlaceholderAPI ]
@@ -127,6 +127,11 @@ commands:
     usage: /sit [zona|importar]
     aliases: [ sentarse, sentar, silla ]
     permission: moderacionx.sit
+  lobby:
+    description: Te lleva al lobby, o lo crea/borra.
+    usage: /lobby [create <nombre>|delete|info]
+    aliases: [ hub, spawn ]
+    permission: moderacionx.lobby
   customitem:
     description: Editor de items - encantamientos, nombre, lore y mas.
     usage: /customitem [encantar|nombre|lore|irrompible|flags|limpiar]
@@ -174,7 +179,8 @@ permissions:
       moderacionx.items: true
       moderacionx.sit: true
       moderacionx.sit.zonas: true
-      moderacionx.secretos: true
+      moderacionx.lobby: true
+      moderacionx.lobby.admin: true
   moderacionx.admin:
     description: Administrar el plugin (recargar, ver info interna).
     default: op
@@ -283,9 +289,12 @@ permissions:
   moderacionx.sit.zonas:
     description: Crear e importar las zonas donde no se puede uno sentar.
     default: op
-  moderacionx.secretos:
-    description: Permite usar los comandos secretos sin clave.
-    default: false
+  moderacionx.lobby:
+    description: Ir al lobby con /lobby.
+    default: true
+  moderacionx.lobby.admin:
+    description: Crear o borrar el lobby.
+    default: op
   # --------------------------------------------------------------------
   #  Exenciones y bypass.
   #  Van fuera de moderacionx.* A PROPOSITO: si estuvieran dentro, dar el

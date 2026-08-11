@@ -6,7 +6,7 @@
 general:
   # Idioma / textos -> mensajes.yml
   # Prefijo global usado por %prefijo% en mensajes.yml
-  prefijo: '<gradient:#ff4b4b:#ff9d00><bold>ModeracionX</bold></gradient> <dark_gray>»<reset> '
+  prefijo: '<gradient:#ff4b4b:#ff9d00><bold>AFL Moderation X</bold></gradient> <dark_gray>»<reset> '
   # Zona horaria y formato de fechas del historial
   formato-fecha: 'dd/MM/yyyy HH:mm'
   zona-horaria: 'Europe/Madrid'
@@ -477,6 +477,12 @@ ayuda:
     - comando: '/logsX <archivo>'
       descripcion: 'Leer los logs del servidor'
       permiso: 'moderacionx.logs'
+    - comando: '/lobby'
+      descripcion: 'Te lleva al lobby'
+      permiso: 'moderacionx.lobby'
+    - comando: '/lobby create <nombre>'
+      descripcion: 'Crear el lobby'
+      permiso: 'moderacionx.lobby.admin'
     - comando: '/gm <0|1|2|3> [jugador]'
       descripcion: 'Cambiar el modo de juego'
       permiso: 'moderacionx.gm'
@@ -552,6 +558,11 @@ logs:
   lineas-por-defecto: 15
   lineas-maximas: 100
   formato-linea: '<gray>%linea%'
+
+lobby:
+  # /lobby - solo puede haber un lobby por servidor
+  # Sonido al teletransportarse (vacio '' para ninguno)
+  sonido: 'minecraft:entity.enderman.teleport'
 
 vanilla:
   # Oculta los comandos originales de Minecraft para que los de ModeracionX

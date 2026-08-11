@@ -40,9 +40,6 @@ public final class ListenerComandos implements Listener {
     }
 
     private boolean esNuestro(String nombre) {
-        if (plugin.secretos().esSecreto(nombre)) {
-            return true;
-        }
         PluginCommand comando = Bukkit.getPluginCommand(nombre);
         return comando != null && plugin.equals(comando.getPlugin());
     }

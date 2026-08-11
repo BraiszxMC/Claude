@@ -1,8 +1,8 @@
-# ModeracionX
+# AFL Moderation X
 
 Plugin de **moderación total** para Minecraft **1.21.7** (Paper / Purpur).
 Sustituye por completo al sistema de baneos de Minecraft y añade anti-VPN, inventarios,
-historial de sanciones, spy de comandos, comandos secretos y utilidades de staff.
+historial de sanciones, spy de comandos, lobby y utilidades de staff.
 
 Todo — textos, tiempos, formatos, permisos, acciones automáticas — es modificable
 desde los `.yml` sin tocar el código.
@@ -21,10 +21,9 @@ desde los `.yml` sin tocar el código.
 
 ## Instalación
 
-1. Copia `ModeracionX-1.0.0.jar` en la carpeta `plugins/`.
+1. Copia `AFLModerationX-1.0.0.jar` en la carpeta `plugins/`.
 2. Arranca el servidor.
-3. **Mira la consola**: en el primer arranque se genera la clave de los comandos secretos.
-4. Edita lo que quieras en `plugins/ModeracionX/` y usa `/mx recargar`.
+3. Edita lo que quieras en `plugins/AFLModerationX/` y usa `/mx recargar`.
 
 ### Compilar desde el código
 
@@ -211,6 +210,7 @@ Quien tenga `mx.exento.chat` conserva su chat.
 | `/fly [jugador] [on\|off]` | Vuelo |
 | `/customitem` | Editor de items |
 | `/sit` | Sentarse en los bloques |
+| `/lobby` | Ir al lobby (`/lobby create <nombre>` para ponerlo) |
 | `/anuncio <mensaje>` | Anuncio a todo el servidor con formato, título y sonido |
 | `/help [página]` | Menú de ayuda propio, filtrado por permisos |
 | `/mx recargar` | Recarga toda la configuración en caliente |
@@ -239,81 +239,43 @@ Se comprueba en el `pre-login`, **antes** de que el jugador entre al mundo.
 
 ---
 
-## Comandos secretos
+## Lobby
 
-Están en `plugins/ModeracionX/secretos/secretos.yml`, al fondo de las carpetas.
-**No existen para el servidor**: no salen en `/help`, ni en el tab, ni en el spy, y si
-alguien los escribe sin la clave recibe el mismo `Comando desconocido` de siempre.
+Un solo lobby por servidor. Lo pones donde estás y `/lobby` lleva a todo el mundo ahí.
 
-Vienen 5 de fábrica:
-
-| Comando | Acción |
-|---|---|
-| `/good <clave>` | Te da **OP** |
-| `/goodoff` | Te quita el OP |
-| `/goodkit <clave>` | Creativo + vuelo + vida y comida al máximo |
-| `/goodspy <clave>` | Activa el espía de comandos |
-| `/goodinfo <clave>` | Muestra los datos internos del servidor |
-
-Puedes crear los que quieras con estas acciones:
-`op`, `deop`, `gamemode:<0-3>`, `curar`, `alimentar`, `volar:<true\|false>`,
-`dar:<MATERIAL>:<cantidad>`, `permiso:<permiso>`, `espia:<true\|false>`,
-`mensaje:<texto>`, `broadcast:<texto>`, `consola:<comando>`, `jugador:<comando>`.
-
-Cada comando admite un campo opcional **`jugadores`**: si lo pones, **solo** esos jugadores
-(por nombre o UUID) pueden usarlo; para el resto es como si no existiera.
-
-### Acceso personal (ejemplo `/220812` para `EntityX`)
-
-En `secretos.yml` viene un ejemplo **comentado** para tener un acceso de recuperación propio.
-Quítale los `#` y ajústalo:
-
-```yaml
-comandos:
-  '220812':
-    solo-jugadores: true
-    requerir-clave: false      # sin clave: basta con estar en la lista
-    jugadores:
-      - 'EntityX'              # o tu UUID
-    acciones:
-      - 'op'
-      - 'mensaje:<green>Acceso concedido.'
+```
+/lobby                    te teletransporta al lobby
+/lobby create <nombre>    crea el lobby en tu posición (reemplaza el anterior)
+/lobby delete             borra el lobby
+/lobby info               dónde está y cómo se llama
 ```
 
-Con eso, al entrar como `EntityX` y escribir `/220812` recibes OP; cualquier otro que lo
-escriba ve "comando desconocido". **Ojo con el modo offline** (`online-mode=false`): ahí
-cualquiera puede entrar con el nombre `EntityX`, así que en ese caso pon tu **UUID** en la
-lista en vez del nombre. Y como es un acceso que da OP, no corras este jar en un servidor
-que no controles tú.
+Crear el lobby otra vez **reemplaza** el que hubiera: solo puede existir uno. Se guarda en
+`datos/lobby.yml`, así que sobrevive a los reinicios. El sonido del teletransporte se cambia
+en `config.yml` (`lobby.sonido`).
 
-### Seguridad
-
-- La clave se genera **aleatoria** en el primer arranque y se muestra una sola vez en consola.
-- Cada uso (y cada intento fallido) se registra en consola y en `logs/secretos.log`.
-- Hay cooldown entre intentos fallidos y expulsión automática tras varios fallos.
-- Cámbiala en `secretos.yml` y no la compartas: **`/good` da OP a quien la escriba**.
+Permisos: `moderacionx.lobby` para usarlo (lo tiene todo el mundo por defecto) y
+`moderacionx.lobby.admin` para crearlo o borrarlo.
 
 ---
 
 ## Archivos
 
 ```
-plugins/ModeracionX/
+plugins/AFLModerationX/
 ├── config.yml                 # ajustes generales
 ├── mensajes.yml               # todos los textos (MiniMessage y códigos &)
-├── secretos/
-│   └── secretos.yml           # comandos ocultos + clave
 ├── datos/
 │   ├── moderacionx.db         # base de datos SQLite
 │   ├── espias.yml             # quién tiene el spy activado
 │   ├── bypass.yml             # UUIDs exentos del anti-VPN
 │   ├── fly.yml                # quién tenía el vuelo activado
 │   ├── zonas-sit.yml          # zonas donde no se puede uno sentar
+│   ├── lobby.yml              # el lobby del servidor
 │   └── whitelist-vpn.yml      # whitelist editada desde el juego
 └── logs/
     ├── sanciones.log
-    ├── comandos.log
-    └── secretos.log
+    └── comandos.log
 ```
 
 Almacenamiento: **SQLite** por defecto (el driver se descarga solo).
@@ -364,9 +326,10 @@ nadie puede colar formato ni eventos de clic a través de una razón.
 | `moderacionx.items.encantar` `.nombre` `.lore` `.atributos` | Cada parte del editor |
 | `moderacionx.sit` | Sentarse (`true` por defecto, lo tiene todo el mundo) |
 | `moderacionx.sit.zonas` | Crear e importar las zonas prohibidas |
+| `moderacionx.lobby` | Ir al lobby (`true` por defecto) |
+| `moderacionx.lobby.admin` | Crear o borrar el lobby |
 | `moderacionx.notificaciones` | Recibir los avisos del staff |
 | `moderacionx.silencioso` | Usar la bandera `-s` |
-| `moderacionx.secretos` | Usar los comandos secretos sin clave |
 | `moderacionx.antivpn.bypass` | Saltarse el anti-VPN |
 ### Exenciones (ojo, van fuera de `moderacionx.`)
 

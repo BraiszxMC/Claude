@@ -9,8 +9,8 @@
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
-    <name>ModeracionX</name>
-    <description>Plugin de moderacion total para Minecraft 1.21.7</description>
+    <name>AFLModerationX</name>
+    <description>AFL Moderation X - plugin de moderacion total para Minecraft 1.21.7</description>
 
     <properties>
         <java.version>21</java.version>

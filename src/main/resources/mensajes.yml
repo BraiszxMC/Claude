@@ -470,6 +470,14 @@ logs:
   vacio: '%prefijo%<gray>El log <white>%archivo% <gray>esta vacio.'
   error: '%prefijo%<red>No se pudo leer el log: <white>%error%'
 
+lobby:
+  no-hay: '%prefijo%<red>No hay ningun lobby. Crealo con <white>/lobby create <nombre><red>.'
+  teletransportado: '%prefijo%<green>Bienvenido al lobby <white>%nombre%<green>.'
+  creado: '%prefijo%<green>Lobby <white>%nombre% <green>creado en tu posicion.'
+  reemplazado: '%prefijo%<green>Lobby actualizado a <white>%nombre% <green>en tu posicion. <gray>(solo puede haber uno)'
+  borrado: '%prefijo%<green>Lobby <white>%nombre% <green>borrado.'
+  info: '%prefijo%<gray>Lobby <white>%nombre% <gray>en <white>%mundo% <gray>(%x%, %y%, %z%)'
+
 antivpn:
   pantalla:
     - ''
@@ -500,7 +508,7 @@ admin:
     - '<gray>Silencios activos: <white>%mutes%'
     - '<gray>Anti-VPN: <white>%antivpn% <gray>(cache: <white>%cache%<gray>)'
     - '<gray>Espias: <white>%espias%'
-    - '<gray>Comandos secretos: <white>%secretos%'
+    - '<gray>Lobby: <white>%lobby%'
   info-jugador:
     - '<dark_gray><strikethrough>          </strikethrough> <white>%jugador% <dark_gray><strikethrough>          </strikethrough>'
     - '<gray>UUID: <white>%uuid%'
