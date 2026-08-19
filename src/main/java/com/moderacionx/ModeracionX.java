@@ -4,11 +4,13 @@ import com.moderacionx.almacen.Almacen;
 import com.moderacionx.almacen.AlmacenSQLite;
 import com.moderacionx.almacen.AlmacenYaml;
 import com.moderacionx.antivpn.AntiVPN;
+import com.moderacionx.bloques.GestorBloques;
 import com.moderacionx.comandos.ComandoAnuncio;
 import com.moderacionx.comandos.ComandoAyuda;
 import com.moderacionx.comandos.ComandoBan;
 import com.moderacionx.comandos.ComandoBanIP;
 import com.moderacionx.comandos.ComandoClear;
+import com.moderacionx.comandos.ComandoCo;
 import com.moderacionx.comandos.ComandoEfectos;
 import com.moderacionx.comandos.ComandoFly;
 import com.moderacionx.comandos.ComandoGM;
@@ -36,6 +38,7 @@ import com.moderacionx.fly.GestorFly;
 import com.moderacionx.items.GestorItems;
 import com.moderacionx.invsee.GestorInvsee;
 import com.moderacionx.lobby.GestorLobby;
+import com.moderacionx.listeners.ListenerBloques;
 import com.moderacionx.listeners.ListenerChat;
 import com.moderacionx.listeners.ListenerComandos;
 import com.moderacionx.listeners.ListenerConexion;
@@ -80,6 +83,7 @@ public final class ModeracionX extends JavaPlugin {
     private GestorSit sit;
     private GestorDiscord discord;
     private GestorLobby lobby;
+    private GestorBloques bloques;
     private BukkitTask tareaRevision;
 
     @Override
@@ -101,12 +105,14 @@ public final class ModeracionX extends JavaPlugin {
         sit = new GestorSit(this);
         discord = new GestorDiscord(this);
         lobby = new GestorLobby(this);
+        bloques = new GestorBloques(this);
 
         registrarComandos();
         registrarListeners();
         programarRevision();
         desactivarComandosVanilla();
         espias.purgar();
+        bloques.purgar();
 
         getLogger().info("AFL Moderation X v" + getPluginMeta().getVersion() + " activado.");
     }
@@ -121,6 +127,9 @@ public final class ModeracionX extends JavaPlugin {
         }
         if (espias != null) {
             espias.volcar();
+        }
+        if (bloques != null) {
+            bloques.cerrar();
         }
         if (almacen != null) {
             almacen.cerrar();
@@ -184,6 +193,7 @@ public final class ModeracionX extends JavaPlugin {
         registrar("customitem", new ComandoItems(this));
         registrar("sit", new ComandoSit(this));
         registrar("lobby", new ComandoLobby(this));
+        registrar("co", new ComandoCo(this));
         registrar("help", new ComandoAyuda(this));
     }
 
@@ -209,6 +219,7 @@ public final class ModeracionX extends JavaPlugin {
         gestor.registerEvents(new ListenerFly(this), this);
         gestor.registerEvents(new ListenerSit(this), this);
         gestor.registerEvents(new ListenerDiscord(this), this);
+        gestor.registerEvents(new ListenerBloques(this), this);
     }
 
     private void programarRevision() {
@@ -220,6 +231,7 @@ public final class ModeracionX extends JavaPlugin {
             sanciones.revisarCaducadas();
             sit.revisar();
             espias.volcar();
+            bloques.volcar();
         }, periodo, periodo);
     }
 
@@ -340,5 +352,9 @@ public final class ModeracionX extends JavaPlugin {
 
     public GestorLobby lobby() {
         return lobby;
+    }
+
+    public GestorBloques bloques() {
+        return bloques;
     }
 }

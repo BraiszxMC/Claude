@@ -470,6 +470,24 @@ logs:
   vacio: '%prefijo%<gray>El log <white>%archivo% <gray>esta vacio.'
   error: '%prefijo%<red>No se pudo leer el log: <white>%error%'
 
+bloques:
+  desactivado: '%prefijo%<red>El registro de bloques esta desactivado.'
+  ayuda:
+    - '%prefijo%<gray>Registro de bloques:'
+    - '<dark_gray>· <white>/co i <gray>- activa el inspector; toca un bloque para ver su historial'
+    - '<dark_gray>· <white>/co lookup <jugador> [dias:<n>] <gray>- que ha roto/puesto alguien'
+  inspector-on: '%prefijo%<green>Inspector <bold>activado<reset><green>. Toca un bloque para ver su historial.'
+  inspector-off: '%prefijo%<red>Inspector <bold>desactivado<reset><red>.'
+  rotura: '<red>rompio'
+  colocacion: '<green>puso'
+  cabecera: '<dark_gray>──── <white>%mundo% <gray>(%x%, %y%, %z%) <dark_gray>────'
+  linea: '<gray>hace %hace% <dark_gray>- <white>%jugador% %accion% <white>%material%'
+  sin-datos: '<gray>Sin datos para este bloque.'
+  lookup-cabecera: '<dark_gray>──── <white>%jugador% <gray>(%pagina%/%paginas%) <dark_gray>· <white>%total% <gray>cambios <dark_gray>────'
+  lookup-linea: '<gray>hace %hace% <dark_gray>- %accion% <white>%material% <dark_gray>en %mundo% (%x%, %y%, %z%)'
+  lookup-vacio: '%prefijo%<gray>%jugador% no tiene ningun cambio de bloque registrado.'
+  lookup-pie: '<dark_gray>Usa <white>/co lookup %jugador% pagina:%siguiente% <dark_gray>para ver mas.'
+
 lobby:
   no-hay: '%prefijo%<red>No hay ningun lobby. Crealo con <white>/lobby create <nombre><red>.'
   teletransportado: '%prefijo%<green>Bienvenido al lobby <white>%nombre%<green>.'

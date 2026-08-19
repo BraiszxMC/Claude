@@ -132,6 +132,11 @@ commands:
     usage: /lobby [create <nombre>|delete|info]
     aliases: [ hub, spawn ]
     permission: moderacionx.lobby
+  co:
+    description: Registro de bloques (inspector y lookup), estilo CoreProtect.
+    usage: /co <i|lookup <jugador>>
+    aliases: [ coreprotect, bloques, core ]
+    permission: moderacionx.bloques
   customitem:
     description: Editor de items - encantamientos, nombre, lore y mas.
     usage: /customitem [encantar|nombre|lore|irrompible|flags|limpiar]
@@ -181,6 +186,7 @@ permissions:
       moderacionx.sit.zonas: true
       moderacionx.lobby: true
       moderacionx.lobby.admin: true
+      moderacionx.bloques: true
   moderacionx.admin:
     description: Administrar el plugin (recargar, ver info interna).
     default: op
@@ -294,6 +300,9 @@ permissions:
     default: true
   moderacionx.lobby.admin:
     description: Crear o borrar el lobby.
+    default: op
+  moderacionx.bloques:
+    description: Usar el inspector y el lookup de bloques (/co).
     default: op
   # --------------------------------------------------------------------
   #  Exenciones y bypass.

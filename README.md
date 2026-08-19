@@ -239,6 +239,29 @@ Se comprueba en el `pre-login`, **antes** de que el jugador entre al mundo.
 
 ---
 
+## Registro de bloques (`/co`, estilo CoreProtect)
+
+Registra cada bloque **roto y colocado** (quién, qué, dónde y cuándo) y deja consultarlo.
+
+```
+/co i                          activa el inspector: toca un bloque y ves su historial
+/co lookup <jugador> [dias:7]  qué ha roto/puesto un jugador
+```
+
+Con el **inspector** activado no rompes ni pones nada: al tocar un bloque (clic izquierdo o
+derecho) te sale quién lo rompió o lo puso y hace cuánto. Se vuelve a tocar `/co i` para
+salir del modo.
+
+Se guarda en su propia base de datos SQLite (`datos/bloques.db`) porque el volumen es alto;
+los cambios se escriben en lotes en segundo plano. Se conserva **30 días** por defecto
+(`bloques.dias`, `0` = para siempre), y puedes desactivar el logging entero con
+`bloques.activado: false`. Permiso: `moderacionx.bloques`.
+
+> **Solo registra desde que instalas el plugin.** No hay forma de saber quién rompió un
+> bloque *antes* de instalarlo: Minecraft no guarda ese historial en ningún sitio.
+
+---
+
 ## Lobby
 
 Un solo lobby por servidor. Lo pones donde estás y `/lobby` lleva a todo el mundo ahí.

@@ -483,6 +483,9 @@ ayuda:
     - comando: '/lobby create <nombre>'
       descripcion: 'Crear el lobby'
       permiso: 'moderacionx.lobby.admin'
+    - comando: '/co i'
+      descripcion: 'Inspector de bloques (quien rompio/puso)'
+      permiso: 'moderacionx.bloques'
     - comando: '/gm <0|1|2|3> [jugador]'
       descripcion: 'Cambiar el modo de juego'
       permiso: 'moderacionx.gm'
@@ -563,6 +566,19 @@ lobby:
   # /lobby - solo puede haber un lobby por servidor
   # Sonido al teletransportarse (vacio '' para ninguno)
   sonido: 'minecraft:entity.enderman.teleport'
+
+bloques:
+  # /co - registro de bloques rotos y colocados (estilo CoreProtect).
+  # OJO: solo registra desde que instalas el plugin; lo de antes no se puede saber.
+  activado: true
+  registrar-roturas: true
+  registrar-colocaciones: true
+  # Dias que se conserva cada registro (0 = para siempre)
+  dias: 30
+  # Cada cuantos cambios se vuelca la cola a la base de datos
+  guardar-cada: 50
+  # Lineas por consulta (inspector y /co lookup)
+  lineas-por-consulta: 10
 
 vanilla:
   # Oculta los comandos originales de Minecraft para que los de ModeracionX
