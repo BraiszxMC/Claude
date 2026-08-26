@@ -1,0 +1,15 @@
+{
+  "key.categories.tvcam.tvcam": "TVCam",
+  "key.tvcam.cut.1": "Cortar a camara 1",
+  "key.tvcam.cut.2": "Cortar a camara 2",
+  "key.tvcam.cut.3": "Cortar a camara 3",
+  "key.tvcam.cut.4": "Cortar a camara 4",
+  "key.tvcam.cut.5": "Cortar a camara 5",
+  "key.tvcam.cut.6": "Cortar a camara 6",
+  "key.tvcam.cut.7": "Cortar a camara 7",
+  "key.tvcam.cut.8": "Cortar a camara 8",
+  "key.tvcam.cut.9": "Cortar a camara 9",
+  "key.tvcam.stop": "Parar la emision",
+  "key.tvcam.add": "Crear camara aqui",
+  "key.tvcam.window": "Abrir/cerrar ventana de camara"
+}
